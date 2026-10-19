@@ -2,7 +2,7 @@
 
 Website for We Clean It All Services, commercial cleaning in Miami-Dade and Broward County, Florida.
 
-Live at https://wecleanitallfl.com (hosted on GitHub Pages from the `main` branch).
+Live at https://www.wecleanitallfl.com (wecleanitallfl.com forwards there) (hosted on GitHub Pages from the `main` branch).
 
 - `index.html`: the whole site (one page)
 - `media/`: logo, icons, and job-site video clips with posters
