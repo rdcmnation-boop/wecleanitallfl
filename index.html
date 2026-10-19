@@ -10,7 +10,7 @@
 <meta property="og:url" content="https://wecleanitallfl.com/">
 <meta property="og:title" content="We Clean It All Services | Commercial Cleaning in Miami-Dade & Broward">
 <meta property="og:description" content="Offices, restaurants, banks, small hotels and commercial buildings. Evening scheduling. Call 954-320-9303 for a quote.">
-<meta property="og:image" content="https://wecleanitallfl.com/media/dining1.jpg">
+<meta property="og:image" content="https://wecleanitallfl.com/media/photos/hero-dining-1200.jpg">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -49,7 +49,9 @@ header{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:rg
 body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--ink)}
 .bar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-block:10px}
 .brand{display:flex;align-items:center;gap:10px;text-decoration:none;min-width:0}
-.brand img{width:104px;height:auto;flex:none}
+.brand .mark{width:auto;height:40px;flex:none}
+.wm{font:800 14px/1.08 var(--display);text-transform:uppercase;letter-spacing:.01em;color:var(--text);white-space:nowrap}
+.wm b{display:block;color:var(--lime);font-weight:800;letter-spacing:.24em;font-size:.95em}
 .long{display:none}
 nav{display:none;gap:26px;font:600 14px var(--display)}
 nav a{text-decoration:none;color:var(--muted)}
@@ -75,9 +77,10 @@ nav a:hover{color:var(--lime)}
 .cta{display:flex;flex-wrap:wrap;gap:12px}
 .chips{display:flex;flex-wrap:wrap;gap:8px 18px;padding:0;margin:0;list-style:none;font:600 13px var(--display);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
 .chips li::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--lime);margin-right:9px}
-.hero-media{display:grid;gap:12px}
-.hero-media .clip{aspect-ratio:4/3;border-radius:14px;overflow:hidden;border:1px solid var(--line);background:var(--panel)}
-.hero-media video{width:100%;height:100%;object-fit:cover}
+.hero-photo{position:relative;margin:0;border-radius:16px;overflow:hidden;border:1px solid var(--line);background:var(--panel);aspect-ratio:1/1}
+.hero-photo img{width:100%;height:100%;object-fit:cover;object-position:50% 62%}
+.hero-photo figcaption{position:absolute;left:12px;bottom:12px;padding:8px 12px;border-radius:999px;background:rgba(7,9,10,.78);font:600 13px var(--display);color:var(--text)}
+.hero-photo figcaption::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--lime);margin-right:8px}
 
 /* sections */
 section{padding-block:64px;border-bottom:1px solid var(--line)}
@@ -89,11 +92,15 @@ section h2{font-size:clamp(28px,5vw,42px);font-weight:800;margin-top:12px}
 .services h3{font-size:17px;font-weight:700}
 .services p{margin:6px 0 0;color:var(--muted);font-size:15.5px;line-height:1.45}
 
-.work{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin-top:34px}
-.work figure{margin:0}
-.work .clip{aspect-ratio:4/3;border-radius:12px;overflow:hidden;border:1px solid var(--line);background:var(--panel)}
-.work video{width:100%;height:100%;object-fit:cover}
-.work figcaption{margin-top:10px;font:600 14px var(--display);color:var(--muted)}
+.work{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:34px}
+.work figure{margin:0;min-width:0}
+.work img{width:100%;height:auto;aspect-ratio:4/5;object-fit:cover;border-radius:12px;border:1px solid var(--line);background:var(--panel)}
+.work figcaption{margin-top:9px;font:600 14px/1.3 var(--display);color:var(--muted)}
+.work-cta{aspect-ratio:4/5;border-radius:12px;background:var(--lime);color:#0a1305;text-decoration:none;display:flex;flex-direction:column;justify-content:space-between;padding:clamp(14px,3vw,26px);min-width:0;transition:background .15s}
+.work-cta:hover{background:#95ec58}
+.work-cta .k{font:700 11px/1.2 var(--display);letter-spacing:.18em;text-transform:uppercase}
+.work-cta strong{font:800 clamp(19px,3.2vw,30px)/1.1 var(--display);text-wrap:balance}
+.work-cta .go{font:700 clamp(13px,1.6vw,16px)/1.2 var(--display)}
 
 .why{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:30px;margin-top:34px}
 .why h3{font-size:20px;color:var(--lime)}
@@ -131,8 +138,11 @@ footer .row{display:flex;flex-wrap:wrap;gap:12px 28px;justify-content:space-betw
   .dock{display:none}
   .hero .wrap{grid-template-columns:1.05fr .95fr;align-items:center;gap:48px;padding-block:68px 76px}
   .quote .grid{grid-template-columns:1fr 1.05fr;align-items:start;gap:56px}
-  .brand img{width:124px}
+  .brand .mark{height:46px}
+  .wm{font-size:15px}
   .long{display:inline}
+  .hero-photo{aspect-ratio:4/5;max-width:470px;justify-self:end;width:100%}
+  .work{grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
   .hero::before{left:-170px;top:70px;width:420px}
   .hero::after{right:-190px;bottom:80px;width:480px}
 }
@@ -142,7 +152,8 @@ footer .row{display:flex;flex-wrap:wrap;gap:12px 28px;justify-content:space-betw
 <header>
   <div class="wrap bar">
     <a class="brand" href="#top" aria-label="We Clean It All Services, home">
-      <img src="media/logo.png" alt="We Clean It All Services" width="499" height="308">
+      <img class="mark" src="media/mark.png" alt="" width="185" height="168">
+      <span class="wm">We Clean It All<b>Services</b></span>
     </a>
     <nav aria-label="Main">
       <a href="#services">Services</a>
@@ -172,9 +183,10 @@ footer .row{display:flex;flex-wrap:wrap;gap:12px 28px;justify-content:space-betw
           <li>Evenings available</li>
         </ul>
       </div>
-      <div class="hero-media" aria-label="Floors we have cleaned">
-        <div class="clip"><video src="media/dining1.mp4" poster="media/dining1.jpg" autoplay muted loop playsinline preload="metadata" aria-label="Freshly cleaned restaurant dining room floor"></video></div>
-      </div>
+      <figure class="hero-photo">
+        <img src="media/photos/hero-dining-1200.jpg" srcset="media/photos/hero-dining-600.jpg 600w, media/photos/hero-dining-1200.jpg 1200w" sizes="(min-width:760px) 470px, 100vw" width="1200" height="1500" alt="Restaurant dining room with clean, freshly mopped floors">
+        <figcaption>Recent job: restaurant dining room</figcaption>
+      </figure>
     </div>
   </div>
 
@@ -199,12 +211,19 @@ footer .row{display:flex;flex-wrap:wrap;gap:12px 28px;justify-content:space-betw
   <section id="work">
     <div class="wrap">
       <span class="eyebrow">Our work</span>
-      <h2>See the floors we leave behind.</h2>
-      <p class="sub">Recent walk-throughs of commercial spaces after a cleaning.</p>
+      <h2>Real jobs. Real clean.</h2>
+      <p class="sub">Photos from our recent jobs: dining rooms, restrooms and floors left clean and ready to open.</p>
       <div class="work">
-        <figure><div class="clip"><video src="media/dining2.mp4" poster="media/dining2.jpg" autoplay muted loop playsinline preload="metadata" aria-label="Cleaned restaurant dining area"></video></div><figcaption>Dining area</figcaption></figure>
-        <figure><div class="clip"><video src="media/restroom.mp4" poster="media/restroom.jpg" autoplay muted loop playsinline preload="metadata" aria-label="Cleaned commercial restroom"></video></div><figcaption>Commercial restroom</figcaption></figure>
-        <figure><div class="clip"><video src="media/dining1.mp4" poster="media/dining1.jpg" autoplay muted loop playsinline preload="metadata" aria-label="Cleaned restaurant floor"></video></div><figcaption>Restaurant floor</figcaption></figure>
+        <figure><img src="media/photos/dining-booths-600.jpg" srcset="media/photos/dining-booths-600.jpg 600w, media/photos/dining-booths-1200.jpg 1200w" sizes="(min-width:760px) 350px, 50vw" width="1200" height="1500" loading="lazy" decoding="async" alt="Restaurant dining room with booths and tables after cleaning"><figcaption>Dining room</figcaption></figure>
+        <figure><img src="media/photos/restroom-shine-600.jpg" srcset="media/photos/restroom-shine-600.jpg 600w, media/photos/restroom-shine-1200.jpg 1200w" sizes="(min-width:760px) 350px, 50vw" width="1200" height="1500" loading="lazy" decoding="async" alt="Freshly mopped restroom tile floor with a clean shine"><figcaption>Restroom floor, just mopped</figcaption></figure>
+        <figure><img src="media/photos/restroom-stall-600.jpg" srcset="media/photos/restroom-stall-600.jpg 600w, media/photos/restroom-stall-1200.jpg 1200w" sizes="(min-width:760px) 350px, 50vw" width="1200" height="1500" loading="lazy" decoding="async" alt="Clean accessible restroom stall"><figcaption>Restroom stall</figcaption></figure>
+        <figure><img src="media/photos/restroom-sink-600.jpg" srcset="media/photos/restroom-sink-600.jpg 600w, media/photos/restroom-sink-1200.jpg 1200w" sizes="(min-width:760px) 350px, 50vw" width="1200" height="1500" loading="lazy" decoding="async" alt="Clean restroom sink and counter"><figcaption>Sinks and counters</figcaption></figure>
+        <figure><img src="media/photos/dining-tables-600.jpg" srcset="media/photos/dining-tables-600.jpg 600w, media/photos/dining-tables-1200.jpg 1200w" sizes="(min-width:760px) 350px, 50vw" width="1200" height="1500" loading="lazy" decoding="async" alt="Restaurant tables and seating over a clean floor"><figcaption>Tables and seating</figcaption></figure>
+        <a class="work-cta" href="#quote">
+          <span class="k">Your space next</span>
+          <strong>Get a quote for your business.</strong>
+          <span class="go">Request a quote &rarr;</span>
+        </a>
       </div>
     </div>
   </section>
