@@ -10,5 +10,7 @@ Live at https://www.wecleanitallfl.com (wecleanitallfl.com forwards there) (host
 - `media/og-card.jpg`: preview image shown when the link is shared
 - `media/icon-*.png`, `favicon.ico`: browser and phone icons
 - `CNAME`: custom domain for GitHub Pages
+- `app/`: the marketplace app (customers, cleaners, owner) at /app/ — see `marketplace/README.md`
+- `marketplace/supabase/`: database schema, security tests and Phase 2 connectors
 
 Contact: 954-320-9303 · wecleanitallfl@gmail.com · Instagram @wecleanitallfl
