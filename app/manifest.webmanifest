@@ -1,0 +1,16 @@
+{
+  "name": "We Clean It All",
+  "short_name": "We Clean It All",
+  "description": "Pide limpieza o trabaja limpiando en Miami-Dade y Broward.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#030605",
+  "theme_color": "#030605",
+  "lang": "es",
+  "icons": [
+    { "src": "../media/icon-180.png", "sizes": "180x180", "type": "image/png" },
+    { "src": "../media/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}
