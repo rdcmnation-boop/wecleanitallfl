@@ -18,33 +18,38 @@ Envía la oferta a los mejores 5 (8 si es urgente). El primero que acepta se que
 
 **Bilingüe** español/inglés. Se instala en el teléfono como app (PWA).
 
-## Probarlo ahora (modo demo)
+## Estado: conectado a Supabase
 
-Abre `/app/` y toca **Probar como: Cliente / Limpiador / Dueño**. En demo todo se guarda solo en ese teléfono.
+- Proyecto de Supabase: **we-clean-it-all** (`fqajygzjteauxornipva`, East US, plan gratis), en la organización "rdcmnation-3555's projects".
+- Ya están cargados la base de datos, la seguridad, el bucket privado de documentos y los conectores `ai-ceo` y `notify`. `notify` sigue apagado hasta la Fase 2.
+- `app/config.js` ya apunta al proyecto con la clave publicable. Esa clave es pública por diseño.
 
-## Activarlo de verdad (unos 15 minutos, gratis)
+### Dos ajustes que solo se hacen en el panel de Supabase (2 minutos)
 
-1. Entra a [supabase.com](https://supabase.com) con `wecleanitallfl@gmail.com` → **New project** → región **East US** → guarda la contraseña de la base de datos.
-2. **SQL Editor** → pega todo `marketplace/supabase/schema.sql` → **Run**. Después pega `storage.sql` → **Run**.
-3. **Authentication → URL Configuration**: Site URL y Redirect URL = `https://www.wecleanitallfl.com/app/`
-4. **Authentication → Providers → Email**: activado, con confirmación de correo.
-5. **Project Settings → API**: copia **Project URL** y la clave **anon public** y pégalas en `app/config.js` (o pásamelas y lo hago yo). La clave anon es pública por diseño; la seguridad la pone la base de datos.
-6. En la app, crea tu cuenta con `wecleanitallfl@gmail.com`. Luego en **SQL Editor**:
+1. **Authentication → Sign In / Providers → Email**: apaga **Confirm email**. El correo gratis de Supabase solo envía a los miembros del equipo del proyecto, así que con la confirmación encendida ningún cliente podría registrarse. Cuando conectes un SMTP propio (por ejemplo Resend, gratis, con tu dominio) la vuelves a encender. En la misma pantalla sube la contraseña mínima a 8.
+2. **Authentication → URL Configuration**: Site URL y Redirect URLs = `https://www.wecleanitallfl.com/app/`
+
+### Tu cuenta de dueño
+
+1. En `www.wecleanitallfl.com/app/` → "Necesito limpieza" → crea la cuenta con `wecleanitallfl@gmail.com`.
+2. Avísale a Claude (o corre esto en SQL Editor):
    ```sql
    insert into public.admins(user_id) select id from auth.users where email = 'wecleanitallfl@gmail.com';
    ```
-   Al volver a entrar verás el **Panel del dueño**.
-
-Notas del plan gratis de Supabase: 500 MB de base de datos, 50,000 usuarios activos al mes, 1 GB de archivos, sin copias de seguridad automáticas. El proyecto se pausa si pasa una semana sin actividad. Para evitarlo, `.github/workflows/supabase-keepalive.yml` lo despierta dos veces por semana. El correo que trae Supabase envía pocos mensajes por hora. Para el lanzamiento conecta un SMTP propio en **Authentication → Emails** (Resend tiene plan gratis).
+3. Sal y vuelve a entrar. La app te pide activar la **verificación en 2 pasos**: escanea el código con Google Authenticator, Microsoft Authenticator o 1Password. Sin ese código nadie entra al panel, aunque tenga tu contraseña.
 
 ## Seguridad
 
 - Cada tabla tiene Row Level Security: cada persona solo ve lo suyo.
-- Nadie puede aprobarse, cambiarse de rol, inventarse calificaciones ni marcar trabajos ajenos. Lo prueban 60 pruebas automáticas.
+- Nadie puede aprobarse, cambiarse de rol, inventarse calificaciones ni marcar trabajos ajenos. Lo prueban 66 pruebas automáticas, y además lo probé en el Supabase real con usuarios temporales que después se borraron.
 - La dirección y el teléfono del cliente solo los ve el limpiador asignado. El directorio muestra solo nombre e inicial, sin teléfono ni correo.
 - Aceptar un trabajo bloquea el pedido, así que nunca hay doble asignación.
 - Los documentos van en un bucket privado: el limpiador ve los suyos y el dueño todos.
 - Cada acción importante queda en `audit_log`.
+- Los poderes de dueño exigen verificación en 2 pasos en cada sesión. Una contraseña robada no abre el panel.
+- Límites contra spam: máximo 5 pedidos abiertos por cliente, 15 al día, y fechas solo dentro de los próximos 6 meses.
+- La app no se deja abrir dentro de páginas ajenas (protección contra páginas falsas o *clickjacking*).
+- Lo que se cree en el futuro en la base de datos queda privado hasta que se le dé permiso a propósito.
 - La app no carga scripts de terceros y tiene una política de seguridad de contenido (CSP) estricta.
 
 Para correr las pruebas: `PGHOST=… PGPORT=… marketplace/supabase/test/run_tests.sh` (Postgres local).
