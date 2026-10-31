@@ -3,8 +3,8 @@
 // To go live: paste your Supabase Project URL and "anon public" key (Supabase → Project Settings → API).
 // The anon key is designed to be public; the database's Row Level Security protects the data.
 window.WCIA_CONFIG = {
-  SUPABASE_URL: "",
-  SUPABASE_ANON_KEY: "",
+  SUPABASE_URL: "https://fqajygzjteauxornipva.supabase.co",
+  SUPABASE_ANON_KEY: "sb_publishable_29CglvTchKfNHjhNnQCkdA_MorPe_51",
   // Suggested hourly rate used only to pre-fill an estimate the customer can change.
   SUGGESTED_HOURLY: 30,
   // Owner contact shown to customers and cleaners.

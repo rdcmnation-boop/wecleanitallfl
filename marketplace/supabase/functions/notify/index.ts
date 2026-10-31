@@ -84,7 +84,7 @@ async function sendEmail(email: string, n: Note): Promise<string> {
 }
 
 Deno.serve(async (req) => {
-  if (req.headers.get("x-cron-secret") !== env("CRON_SECRET") || !env("CRON_SECRET")) {
+  if (!env("CRON_SECRET") || req.headers.get("x-cron-secret") !== env("CRON_SECRET")) {
     return new Response("forbidden", { status: 403 });
   }
   const q = await fetch(`${SB}/rest/v1/notifications?status=eq.queued&channel=neq.inapp&order=id.asc&limit=50`, { headers: sbHeaders });

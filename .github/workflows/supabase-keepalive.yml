@@ -18,4 +18,4 @@ jobs:
           URL=$(grep -oE 'SUPABASE_URL: *"[^"]*"' app/config.js | sed -E 's/.*"([^"]*)"/\1/')
           KEY=$(grep -oE 'SUPABASE_ANON_KEY: *"[^"]*"' app/config.js | sed -E 's/.*"([^"]*)"/\1/')
           if [ -z "$URL" ] || [ -z "$KEY" ]; then echo "Demo mode, nothing to ping."; exit 0; fi
-          curl -fsS -X POST "$URL/rest/v1/rpc/ping" -H "apikey: $KEY" -H "Authorization: Bearer $KEY" -H "Content-Type: application/json" -d '{}'
+          curl -fsS -X POST "$URL/rest/v1/rpc/ping" -H "apikey: $KEY" -H "Content-Type: application/json" -d '{}'

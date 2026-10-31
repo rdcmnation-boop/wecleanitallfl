@@ -1,5 +1,5 @@
 -- We Clean It All — Marketplace, Phase 1
--- Run once in Supabase: Dashboard → SQL Editor → paste this whole file → Run.
+-- Live project: we-clean-it-all (fqajygzjteauxornipva). Re-runnable on a fresh project: SQL Editor → paste → Run.
 -- Security model: every table has Row Level Security ON. Users only ever see their own rows.
 -- Anything that changes money, status, approval or assignment goes through the functions below,
 -- which check who is calling. The browser never gets the service key.
@@ -14,9 +14,17 @@ create table if not exists public.admins (
 alter table public.admins enable row level security;
 -- No policies on admins: nobody can read or write it from the app. Add admins in the SQL editor only.
 
-create or replace function public.is_admin() returns boolean
+-- Is this login an owner account? (used only to ask for the 2-step code)
+create or replace function public.is_admin_account() returns boolean
 language sql stable security definer set search_path = public as $$
   select exists (select 1 from public.admins where user_id = auth.uid());
+$$;
+-- Owner powers require 2-step verification (authenticator app) on this session: aal2.
+-- A stolen owner password alone opens nothing.
+create or replace function public.is_admin() returns boolean
+language sql stable security definer set search_path = public as $$
+  select exists (select 1 from public.admins where user_id = auth.uid())
+     and coalesce(auth.jwt() ->> 'aal', 'aal1') = 'aal2';
 $$;
 
 -- ───────────────────────── tables ─────────────────────────
@@ -88,6 +96,7 @@ create table if not exists public.bookings (
 create index if not exists bookings_customer_idx on public.bookings(customer_id);
 create index if not exists bookings_worker_idx on public.bookings(worker_id);
 create index if not exists bookings_status_idx on public.bookings(status);
+create index if not exists bookings_preferred_idx on public.bookings(preferred_worker_id);
 
 create table if not exists public.job_offers (
   id uuid primary key default gen_random_uuid(),
@@ -110,6 +119,8 @@ create table if not exists public.reviews (
   comment text not null default '' check (char_length(comment) <= 600),
   created_at timestamptz not null default now()
 );
+create index if not exists reviews_customer_idx on public.reviews(customer_id);
+create index if not exists reviews_worker_idx on public.reviews(worker_id);
 
 -- Outbox: the app writes here; the "notify" connector (Phase 2) sends WhatsApp / SMS / email from it.
 create table if not exists public.notifications (
@@ -229,6 +240,20 @@ begin
   end if;
   if new.urgency = 'scheduled' and new.scheduled_at is null then
     raise exception 'scheduled_at required';
+  end if;
+  if new.scheduled_at is not null and new.scheduled_at > now() + interval '180 days' then
+    raise exception 'date_too_far';
+  end if;
+  -- Anti-spam: protects cleaners from floods of fake requests.
+  if not public.is_admin() then
+    if (select count(*) from public.bookings where customer_id = new.customer_id
+          and status in ('requested','offered','assigned','in_progress')) >= 5 then
+      raise exception 'too_many_open';
+    end if;
+    if (select count(*) from public.bookings where customer_id = new.customer_id
+          and created_at > now() - interval '24 hours') >= 15 then
+      raise exception 'rate_limited';
+    end if;
   end if;
   return new;
 end $$;
@@ -534,57 +559,51 @@ alter table public.notifications enable row level security;
 alter table public.audit_log enable row level security;
 
 drop policy if exists profiles_self_read on public.profiles;
-create policy profiles_self_read on public.profiles for select using (id = auth.uid() or public.is_admin());
+create policy profiles_self_read on public.profiles for select to authenticated using (id = (select auth.uid()) or (select public.is_admin()));
 drop policy if exists profiles_self_update on public.profiles;
-create policy profiles_self_update on public.profiles for update using (id = auth.uid() or public.is_admin()) with check (id = auth.uid() or public.is_admin());
-
+create policy profiles_self_update on public.profiles for update to authenticated using (id = (select auth.uid()) or (select public.is_admin())) with check (id = (select auth.uid()) or (select public.is_admin()));
 drop policy if exists workers_self_read on public.workers;
-create policy workers_self_read on public.workers for select using (id = auth.uid() or public.is_admin());
+create policy workers_self_read on public.workers for select to authenticated using (id = (select auth.uid()) or (select public.is_admin()));
 drop policy if exists workers_self_update on public.workers;
-create policy workers_self_update on public.workers for update using (id = auth.uid() or public.is_admin()) with check (id = auth.uid() or public.is_admin());
-
+create policy workers_self_update on public.workers for update to authenticated using (id = (select auth.uid()) or (select public.is_admin())) with check (id = (select auth.uid()) or (select public.is_admin()));
 drop policy if exists bookings_read on public.bookings;
-create policy bookings_read on public.bookings for select using (customer_id = auth.uid() or worker_id = auth.uid() or public.is_admin());
+create policy bookings_read on public.bookings for select to authenticated using (customer_id = (select auth.uid()) or worker_id = (select auth.uid()) or (select public.is_admin()));
 drop policy if exists bookings_customer_insert on public.bookings;
-create policy bookings_customer_insert on public.bookings for insert with check (
-  customer_id = auth.uid() and exists (select 1 from public.profiles where id = auth.uid() and role = 'customer'));
+create policy bookings_customer_insert on public.bookings for insert to authenticated with check (
+  customer_id = (select auth.uid()) and exists (select 1 from public.profiles where id = (select auth.uid()) and role = 'customer'));
 drop policy if exists bookings_admin_update on public.bookings;
-create policy bookings_admin_update on public.bookings for update using (public.is_admin()) with check (public.is_admin());
-
+create policy bookings_admin_update on public.bookings for update to authenticated using ((select public.is_admin())) with check ((select public.is_admin()));
 drop policy if exists offers_read on public.job_offers;
-create policy offers_read on public.job_offers for select using (worker_id = auth.uid() or public.is_admin());
-
+create policy offers_read on public.job_offers for select to authenticated using (worker_id = (select auth.uid()) or (select public.is_admin()));
 drop policy if exists reviews_read on public.reviews;
-create policy reviews_read on public.reviews for select using (customer_id = auth.uid() or worker_id = auth.uid() or public.is_admin());
-
+create policy reviews_read on public.reviews for select to authenticated using (customer_id = (select auth.uid()) or worker_id = (select auth.uid()) or (select public.is_admin()));
 drop policy if exists notifications_read on public.notifications;
-create policy notifications_read on public.notifications for select using ((user_id = auth.uid() and channel = 'inapp') or public.is_admin());
-
+create policy notifications_read on public.notifications for select to authenticated using ((user_id = (select auth.uid()) and channel = 'inapp') or (select public.is_admin()));
 drop policy if exists audit_admin_read on public.audit_log;
-create policy audit_admin_read on public.audit_log for select using (public.is_admin());
+create policy audit_admin_read on public.audit_log for select to authenticated using ((select public.is_admin()));
 
 -- Lock down: anonymous visitors get nothing; signed-in users get only what the policies above allow.
 -- (Supabase grants everything to anon/authenticated by default, so start from zero and add back.)
 revoke all on all tables in schema public from anon, authenticated;
 revoke all on all sequences in schema public from anon, authenticated;
-revoke all on all functions in schema public from public, anon;
+revoke all on all functions in schema public from public, anon, authenticated;
 grant usage on sequence public.booking_code_seq, public.notifications_id_seq, public.audit_log_id_seq to authenticated;
 grant select, update on public.profiles, public.workers to authenticated;
-grant select, insert on public.bookings to authenticated;
-grant update on public.bookings to authenticated;  -- policy limits this to admins
+grant select, insert, update on public.bookings to authenticated;  -- update limited to admins by policy
 grant select on public.job_offers, public.reviews, public.notifications, public.audit_log to authenticated;
-revoke all on function public._notify(uuid,text,jsonb) from public, anon, authenticated;
-revoke all on function public._audit(text,text,text,jsonb) from public, anon, authenticated;
-revoke all on function public.handle_new_user() from public, anon, authenticated;
-grant execute on function public.is_admin(), public.my_offers(), public.accept_offer(uuid), public.decline_offer(uuid),
+grant execute on function public.is_admin(), public.is_admin_account(), public.my_offers(), public.accept_offer(uuid), public.decline_offer(uuid),
   public.start_job(uuid), public.complete_job(uuid), public.cancel_booking(uuid), public.list_workers(text,text),
   public.my_bookings(), public.my_jobs(), public.review_booking(uuid,int,text), public.admin_set_worker_status(uuid,text),
   public.admin_assign(uuid,uuid), public.admin_redispatch(uuid), public.admin_workers(), public.admin_bookings(),
   public.admin_stats(), public.mark_notifications_read() to authenticated;
+-- Future tables/functions stay private unless granted on purpose.
+alter default privileges in schema public revoke all on tables from anon, authenticated;
+alter default privileges in schema public revoke all on functions from public, anon, authenticated;
+alter default privileges in schema public revoke all on sequences from anon, authenticated;
 
 -- Keep-alive: Supabase pauses free projects after a week without activity.
 -- A GitHub Action calls this twice a week (see .github/workflows/supabase-keepalive.yml). Returns nothing private.
-create or replace function public.ping() returns boolean language sql stable as $$ select true $$;
+create or replace function public.ping() returns boolean language sql stable set search_path = public as $$ select true $$;
 grant execute on function public.ping() to anon, authenticated;
 
 -- Live updates in the app (new job offers pop up for cleaners without refreshing).

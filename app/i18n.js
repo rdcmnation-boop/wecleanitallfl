@@ -120,7 +120,16 @@ window.WCIA_I18N = {
     help: "Ayuda", privacy_note: "Tu dirección y teléfono solo se comparten con quien hace tu limpieza.",
     wa_msg_customer: "Hola, soy {name} de We Clean It All. Sobre el pedido {code}.",
     wa_msg_offer: "We Clean It All: trabajo {code} · {service} · {area} · {when} · {pay}. Abre la app para aceptar: {url}",
-    wa_msg_worker: "Hola {name}, te escribe We Clean It All."
+    wa_msg_worker: "Hola {name}, te escribe We Clean It All.",
+    mfa_title: "Verificación en 2 pasos",
+    mfa_setup_sub: "Protege tu panel de dueño. Abre Google Authenticator, Microsoft Authenticator o 1Password y escanea este código.",
+    mfa_secret: "¿No puedes escanear? Escribe esta clave:",
+    mfa_code: "Código de 6 números", mfa_verify: "Verificar", mfa_login_sub: "Escribe el código de tu app de autenticación.",
+    mfa_wrong: "Código incorrecto o vencido. Prueba el nuevo.", mfa_skip: "Entrar sin panel",
+    mfa_why: "Aunque alguien robe tu contraseña, no podrá entrar a tu panel sin tu teléfono.",
+    err_too_many: "Tienes 5 pedidos abiertos. Espera a que se completen o cancela uno.",
+    err_rate: "Demasiados pedidos hoy. Intenta mañana o llama al dueño.",
+    err_date_far: "Escoge una fecha dentro de los próximos 6 meses."
   },
   en: {
     brand_sub: "Cleaning made simple",
@@ -233,6 +242,15 @@ window.WCIA_I18N = {
     help: "Help", privacy_note: "Your address and phone are shared only with the person who cleans for you.",
     wa_msg_customer: "Hi, this is {name} from We Clean It All. About order {code}.",
     wa_msg_offer: "We Clean It All: job {code} · {service} · {area} · {when} · {pay}. Open the app to accept: {url}",
-    wa_msg_worker: "Hi {name}, this is We Clean It All."
+    wa_msg_worker: "Hi {name}, this is We Clean It All.",
+    mfa_title: "2-step verification",
+    mfa_setup_sub: "Protect your owner panel. Open Google Authenticator, Microsoft Authenticator or 1Password and scan this code.",
+    mfa_secret: "Can't scan? Type this key:",
+    mfa_code: "6-digit code", mfa_verify: "Verify", mfa_login_sub: "Enter the code from your authenticator app.",
+    mfa_wrong: "Wrong or expired code. Try the new one.", mfa_skip: "Continue without panel",
+    mfa_why: "Even if someone steals your password, they can't open your panel without your phone.",
+    err_too_many: "You have 5 open orders. Wait for them to finish or cancel one.",
+    err_rate: "Too many orders today. Try tomorrow or call the owner.",
+    err_date_far: "Pick a date within the next 6 months."
   }
 };

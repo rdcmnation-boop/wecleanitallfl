@@ -17,7 +17,8 @@ as() {
   if [ "$who" = anon ]; then
     psql -U postgres -d $DB -qtA -c "begin; set local role anon; $1; commit;" 2>&1
   else
-    psql -U postgres -d $DB -qtA -c "begin; set local role authenticated; set local request.jwt.claim.sub = '$who'; $1; commit;" 2>&1
+    local aal="${AAL:-aal2}"
+    psql -U postgres -d $DB -qtA -c "begin; set local role authenticated; set local request.jwt.claim.sub = '$who'; set local request.jwt.claims = '{\"sub\":\"$who\",\"aal\":\"$aal\"}'; $1; commit;" 2>&1
   fi
 }
 check() { # name, actual, expected-regex
@@ -57,6 +58,12 @@ check "customer cannot delete bookings" "$(as $C1 "delete from bookings")" 'perm
 check "worker cannot call matching engine directly" "$(as $W1 "select dispatch_booking(gen_random_uuid())")" 'permission denied'
 check "non-admin cannot approve" "$(as $W1 "select admin_set_worker_status('$W1','approved')")" 'admin_only'
 check "admin_stats hidden from non-admin" "$(as $C1 "select coalesce(admin_stats()::text,'null')")" '^null$'
+
+echo "Owner needs 2-step verification"
+check "owner without 2-step code has no powers" "$(AAL=aal1 as $A "select admin_set_worker_status('$W1','approved')")" 'admin_only'
+check "owner without 2-step code sees no stats" "$(AAL=aal1 as $A "select coalesce(admin_stats()::text,'null')")" '^null$'
+check "app can tell it is an owner account (to ask for the code)" "$(AAL=aal1 as $A "select is_admin_account()")" '^t$'
+check "non-owner is not an owner account" "$(as $C1 "select is_admin_account()")" '^f$'
 
 echo "Admin approves, cleaners set up profiles"
 as $A "select admin_set_worker_status('$W1','approved'); select admin_set_worker_status('$W2','approved')" >/dev/null
@@ -113,6 +120,13 @@ check "requested cleaner ranks first" "$(sq "select worker_id from job_offers wh
 check "customer can cancel" "$(as $C1 "select cancel_booking('$B2')"; sq "select status from bookings where id='$B2'")" 'cancelled'
 check "offers withdrawn after cancel" "$(sq "select count(*) from job_offers where booking_id='$B2' and status='sent'")" '^0$'
 
+echo "Anti-spam"
+SPAM=00000000-0000-0000-0000-0000000000d1
+mk $SPAM spam@x.com '{"role":"customer","full_name":"Spam"}' >/dev/null
+for i in 1 2 3 4 5; do as $SPAM "insert into bookings(segment,service,zip,urgency) values ('residential','standard','33139','asap')" >/dev/null; done
+check "6th open request blocked" "$(as $SPAM "insert into bookings(segment,service,zip,urgency) values ('residential','standard','33139','asap')")" 'too_many_open'
+check "dates more than 6 months out blocked" "$(as $C2 "insert into bookings(segment,service,zip,urgency,scheduled_at) values ('residential','standard','33139','scheduled',now()+interval '400 days')")" 'date_too_far'
+
 echo "Price fit"
 as $A "select admin_set_worker_status('$W3','approved')" >/dev/null
 as $W3 "update workers set zips='{33308}', services='{standard}', languages='{es,en}', years_experience=6, hourly_rate=90, available=true where id='$W3'" >/dev/null
@@ -126,7 +140,7 @@ check "directory hides phone/email" "$(as $C2 "select row_to_json(t)::text from 
 check "directory shows short name" "$(as $C2 "select display_name from list_workers('33308','standard') order by 1")" 'Maria P\.'
 check "anon cannot use directory" "$(as anon "select * from list_workers(null,null)")" 'permission denied'
 check "admin stats" "$(as $A "select admin_stats()->>'workers_approved'")" '^2$'
-check "admin sees all bookings with offers" "$(as $A "select count(*) from admin_bookings()")" '^3$'
+check "admin sees all bookings with offers" "$(as $A "select count(*) from admin_bookings()")" '^8$'
 B3=$(as $C2 "insert into bookings(segment,service,zip,urgency) values ('commercial','office','33130','asap') returning id" | head -1)
 check "no match → stays requested (flagged for owner)" "$(sq "select status from bookings where id='$B3'")" '^requested$'
 check "admin manual assign" "$(as $A "select admin_assign('$B3','$W2')"; sq "select status||'/'||worker_id from bookings where id='$B3'")" "assigned/$W2"

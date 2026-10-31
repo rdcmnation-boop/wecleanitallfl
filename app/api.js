@@ -59,7 +59,7 @@
 
     async function rest(path, method, body, extra) {
       const t = await token();
-      const headers = Object.assign({ apikey: KEY, Authorization: "Bearer " + (t || KEY), "Content-Type": "application/json" }, extra || {});
+      const headers = Object.assign({ apikey: KEY, "Content-Type": "application/json" }, t ? { Authorization: "Bearer " + t } : {}, extra || {});
       return raw("/rest/v1" + path, { method: method || "GET", headers, body: body === undefined ? undefined : JSON.stringify(body) });
     }
     const rpc = (fn, args) => rest("/rpc/" + fn, "POST", args || {});
@@ -111,12 +111,34 @@
       },
       async me() {
         if (!(await token())) return null;
-        const [profiles, isAdmin] = await Promise.all([rest("/profiles?select=*&limit=1"), rpc("is_admin")]);
+        const [profiles, isAdmin, isAdminAccount] = await Promise.all([rest("/profiles?select=*&limit=1"), rpc("is_admin"), rpc("is_admin_account")]);
         const profile = profiles && profiles[0];
         if (!profile) return null;
         let worker = null;
         if (profile.role === "worker") { const w = await rest("/workers?select=*&id=eq." + profile.id); worker = w && w[0]; }
-        return { profile, worker, isAdmin: !!isAdmin };
+        return { profile, worker, isAdmin: !!isAdmin, adminNeedsMfa: !!isAdminAccount && !isAdmin };
+      },
+      // 2-step verification (authenticator app) — required for owner powers.
+      async mfaStatus() {
+        const t = await token();
+        const u = await raw("/auth/v1/user", { headers: { apikey: KEY, Authorization: "Bearer " + t } });
+        const factors = (u && u.factors) || [];
+        return { verified: factors.filter((f) => f.factor_type === "totp" && f.status === "verified"), unverified: factors.filter((f) => f.status !== "verified") };
+      },
+      async mfaEnroll() {
+        const t = await token(); const h = { apikey: KEY, Authorization: "Bearer " + t, "Content-Type": "application/json" };
+        const st = await this.mfaStatus();
+        for (const f of st.unverified) await raw("/auth/v1/factors/" + f.id, { method: "DELETE", headers: h }).catch(() => {});
+        const r = await raw("/auth/v1/factors", { method: "POST", headers: h, body: JSON.stringify({ factor_type: "totp", friendly_name: "We Clean It All " + new Date().toISOString().slice(0, 10) + " " + Math.random().toString(36).slice(2, 6), issuer: "We Clean It All" }) });
+        let qr = (r.totp && r.totp.qr_code) || "";
+        if (qr && !qr.startsWith("data:")) qr = "data:image/svg+xml;utf-8," + encodeURIComponent(qr);
+        return { factorId: r.id, qr, secret: r.totp && r.totp.secret };
+      },
+      async mfaVerify(factorId, code) {
+        const t = await token(); const h = { apikey: KEY, Authorization: "Bearer " + t, "Content-Type": "application/json" };
+        const ch = await raw("/auth/v1/factors/" + factorId + "/challenge", { method: "POST", headers: h, body: "{}" });
+        const r = await raw("/auth/v1/factors/" + factorId + "/verify", { method: "POST", headers: h, body: JSON.stringify({ challenge_id: ch.id, code: String(code).replace(/\D/g, "") }) });
+        saveSession(r);
       },
       saveProfile: (id, p) => rest("/profiles?id=eq." + id, "PATCH", p, { Prefer: "return=minimal" }),
       saveWorker: (id, w) => rest("/workers?id=eq." + id, "PATCH", w, { Prefer: "return=minimal" }),
@@ -142,6 +164,7 @@
       async aiBriefing(lang) {
         try {
           const t = await token();
+          if (!t) return null;
           const r = await fetch(URL_ + "/functions/v1/ai-ceo?lang=" + lang, { method: "POST", headers: { apikey: KEY, Authorization: "Bearer " + t } });
           if (!r.ok) return null;
           const j = await r.json();
@@ -286,7 +309,7 @@
       async me() {
         const db = load(); const profile = uid && P(db, uid);
         if (!profile) { uid = null; store.del(SK); return null; }
-        return { profile: Object.assign({}, profile), worker: W(db, uid) ? Object.assign({}, W(db, uid)) : null, isAdmin: isAdmin(db) };
+        return { profile: Object.assign({}, profile), worker: W(db, uid) ? Object.assign({}, W(db, uid)) : null, isAdmin: isAdmin(db), adminNeedsMfa: false };
       },
       async saveProfile(id, p) { const db = load(); need(id === uid); Object.assign(P(db, id), { full_name: p.full_name, phone: p.phone, language: p.language }); save(db); },
       async saveWorker(id, w) {
@@ -308,6 +331,7 @@
         need(me && me.role === "customer", "not_allowed");
         need(/^\d{5}$/.test(b.zip), "check_violation");
         need(b.urgency !== "scheduled" || b.scheduled_at, "scheduled_at required");
+        need(db.bookings.filter((x) => x.customer_id === uid && ["requested", "offered", "assigned", "in_progress"].includes(x.status)).length < 5, "too_many_open");
         const row = Object.assign({}, b, { id: uuid(), code: "WC-" + db.seq++, customer_id: uid, status: "requested", worker_id: null, created_at: now() });
         db.bookings.push(row); dispatch(db, row); save(db);
         return { id: row.id, code: row.code, status: row.status };

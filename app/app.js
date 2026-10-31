@@ -1,6 +1,8 @@
 // We Clean It All — app UI (customers, cleaners, owner). Plain JS, no build step.
 (function () {
   "use strict";
+  // Refuse to run inside another site's frame (clickjacking); GitHub Pages can't send frame-ancestors.
+  if (window.top !== window.self) { try { window.top.location = window.location.href; } catch (e) { /* cross-origin */ } document.documentElement.innerHTML = ""; return; }
   const API = window.WCIA_API, CFG = window.WCIA_CONFIG || {}, I18N = window.WCIA_I18N;
   const $ = (s, r) => (r || document).querySelector(s);
   const root = $("#app");
@@ -74,6 +76,7 @@
     setTimeout(() => { el.classList.remove("in"); setTimeout(() => el.remove(), 300); }, 2600);
   }
   function errMsg(e) {
+    if (S.screen === "mfa") return t("mfa_wrong");
     const c = (e && (e.code || e.message)) || "";
     const map = {
       invalid_credentials: lang === "es" ? "Correo o contraseña incorrectos." : "Wrong email or password.",
@@ -82,7 +85,9 @@
       user: lang === "es" ? "Ese correo ya tiene cuenta. Entra." : "That email already has an account. Sign in.",
       email: lang === "es" ? "Confirma tu correo primero." : "Confirm your email first.",
       not_approved: t("pending_title"), worker_not_approved: t("pending_title"),
-      password: t("pw_hint")
+      password: t("pw_hint"),
+      too_many_open: t("err_too_many"), rate_limited: t("err_rate"), date_too_far: t("err_date_far"),
+      invalid_totp: t("mfa_wrong"), mfa: t("mfa_wrong")
     };
     return map[c] || t("error_generic");
   }
@@ -101,9 +106,21 @@
       try { S.me = await API.me(); } catch (e) { S.me = null; }
     }
     if (API.recovery && API.recovery()) S.screen = "newpass";
-    else if (S.me) startRole();
+    else if (S.me) afterLogin();
     render();
     poll();
+  }
+  async function afterLogin() {
+    if (S.me && S.me.adminNeedsMfa && !S.skipMfa) {
+      S.screen = "mfa"; S.mfa = { loading: true }; render();
+      try {
+        const st = await API.mfaStatus();
+        if (st.verified.length) S.mfa = { factorId: st.verified[0].id, enrolled: true };
+        else S.mfa = Object.assign({ enrolled: false }, await API.mfaEnroll());
+      } catch (e) { console.error(e); S.mfa = { error: true }; }
+      render(); return;
+    }
+    startRole();
   }
   function role() { return !S.me ? null : S.me.isAdmin ? "admin" : S.me.profile.role; }
   const TABS = {
@@ -215,6 +232,15 @@
       body = "<h2>" + esc(t("new_password")) + "</h2>" +
         '<form class="card form" data-form="newpass" novalidate>' + field("password", t("new_password"), "password", 'required minlength="8" autocomplete="new-password" autofocus', t("pw_hint")) +
         '<button class="btn solid block" type="submit">' + esc(t("save_password")) + "</button></form>";
+    } else if (S.screen === "mfa") {
+      const m = S.mfa || {};
+      body = '<div class="empty">' + icon("shield", "xl") + "<h2>" + esc(t("mfa_title")) + "</h2><p>" + esc(m.enrolled ? t("mfa_login_sub") : t("mfa_setup_sub")) + "</p></div>" +
+        (m.loading ? loading() : m.error ? '<p class="muted center">' + esc(t("error_generic")) + "</p>" :
+          '<form class="card form" data-form="mfa" novalidate>' +
+          (!m.enrolled && m.qr ? '<img class="qr" src="' + esc(m.qr) + '" alt="QR" width="220" height="220"><p class="fine">' + esc(t("mfa_secret")) + '</p><code class="secret">' + esc(m.secret || "") + "</code>" : "") +
+          field("code", t("mfa_code"), "text", 'required inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" autofocus') +
+          '<button class="btn solid block" type="submit">' + esc(t("mfa_verify")) + '</button><p class="fine">' + esc(t("mfa_why")) + "</p></form>") +
+        '<button class="link-btn center" data-act="skipmfa">' + esc(t("mfa_skip")) + "</button>";
     } else if (S.screen === "checkemail") {
       body = '<div class="empty big">' + icon("check", "xl") + "<h2>" + esc(t("check_email")) + '</h2><button class="btn ghost" data-act="signin">' + esc(t("sign_in")) + "</button></div>";
     }
@@ -594,6 +620,7 @@
     if (a === "lang") { lang = lang === "es" ? "en" : "es"; store.set("wcia_lang", lang); document.documentElement.lang = lang; render(); }
     else if (a === "auth") { S.authRole = el.dataset.role; S.form.kind = "individual"; S.screen = "signup"; render(); }
     else if (a === "signin") { S.screen = "signin"; render(); }
+    else if (a === "skipmfa") { S.skipMfa = true; S.mfa = null; startRole(); }
     else if (a === "forgot") { S.screen = "forgot"; render(); }
     else if (a === "home") { S.screen = "landing"; render(); }
     else if (a === "demo") { await API.demoLogin(el.dataset.kind); S.me = await API.me(); startRole(); }
@@ -691,14 +718,17 @@
     try {
       if (kind === "signup") {
         const r = await run(() => API.signUp({ email: d.email.trim(), password: d.password, role: S.authRole, full_name: d.full_name.trim(), phone: d.phone.trim(), language: lang, kind: d.kind || "individual", company_name: (d.company_name || "").trim() }));
-        if (r && r.confirmed) { S.me = await API.me(); startRole(); } else { S.screen = "checkemail"; render(); }
+        if (r && r.confirmed) { S.me = await API.me(); afterLogin(); } else { S.screen = "checkemail"; render(); }
       } else if (kind === "signin") {
         await run(() => API.signIn({ email: d.email.trim(), password: d.password }));
-        S.me = await API.me(); startRole();
+        S.me = await API.me(); afterLogin();
       } else if (kind === "forgot") {
         await run(() => API.resetPassword(d.email.trim()), t("reset_sent")); S.screen = "signin"; render();
       } else if (kind === "newpass") {
-        await run(() => API.setPassword(d.password), t("saved")); S.me = await API.me(); startRole();
+        await run(() => API.setPassword(d.password), t("saved")); S.me = await API.me(); afterLogin();
+      } else if (kind === "mfa") {
+        await run(() => API.mfaVerify(S.mfa.factorId, d.code));
+        S.me = await API.me(); S.mfa = null; startRole();
       } else if (kind === "book") {
         syncBook(form);
         const f = S.form.book;
