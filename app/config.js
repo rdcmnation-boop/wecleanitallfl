@@ -10,5 +10,5 @@ window.WCIA_CONFIG = {
   // Owner contact shown to customers and cleaners.
   BUSINESS_PHONE: "9543209303",
   BUSINESS_EMAIL: "wecleanitallfl@gmail.com",
-  APP_URL: "https://www.wecleanitallfl.com/app/"
+  APP_URL: "https://www.wecleanitallfl.com/"
 };

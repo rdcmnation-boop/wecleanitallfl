@@ -182,8 +182,8 @@
     const focus = root.querySelector("[autofocus]"); if (focus && !sameTab) focus.focus();
   }
   function header(extra) {
-    return '<header class="top"><a class="brand" href="../" aria-label="We Clean It All">' +
-      '<img src="../media/mark.svg" alt="" width="40" height="40"><span class="wm">We Clean<b>It All</b></span></a>' +
+    return '<header class="top"><a class="brand" href="/" aria-label="We Clean It All">' +
+      '<img src="/media/mark.svg" alt="" width="40" height="40"><span class="wm">We Clean<b>It All</b></span></a>' +
       '<div class="top-actions">' + (extra || "") +
       '<button class="chip-btn" data-act="lang" aria-label="' + t("language") + '">' + (lang === "es" ? "EN" : "ES") + "</button></div></header>";
   }
@@ -201,6 +201,7 @@
         '<button class="big-choice" data-act="auth" data-role="worker">' + icon("broom", "lg") + "<span><b>" + esc(t("want_work")) + "</b><small>" + esc(t("want_work_sub")) + "</small></span></button>" +
         "</div>" +
         '<button class="link-btn center" data-act="signin">' + esc(t("have_account")) + "</button>" +
+        '<a class="biz-link" href="/comercial/">' + icon("building") + "<span><b>" + esc(t("biz_title")) + "</b><small>" + esc(t("biz_sub")) + "</small></span><i aria-hidden=\"true\">›</i></a>" +
         (API.mode === "demo" ? '<div class="demo-try"><span>' + esc(t("demo_try")) + ':</span><button class="pill" data-act="demo" data-kind="customer">' + esc(t("demo_customer")) +
           '</button><button class="pill" data-act="demo" data-kind="worker">' + esc(t("demo_worker")) + '</button><button class="pill" data-act="demo" data-kind="owner">' + esc(t("demo_owner")) + "</button></div>" : "");
     } else if (S.screen === "signup") {
@@ -774,7 +775,7 @@
   });
 
   // PWA
-  if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(() => {});
+  if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("/sw.js").catch(() => {});
 
   boot();
 })();

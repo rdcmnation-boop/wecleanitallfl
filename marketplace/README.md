@@ -1,6 +1,6 @@
 # We Clean It All — Marketplace (Fase 1)
 
-App para **clientes**, **limpiadores** (personas y compañías) y **el dueño**, en `www.wecleanitallfl.com/app/`.
+App para **clientes**, **limpiadores** (personas y compañías) y **el dueño**, en la portada `www.wecleanitallfl.com` (la página comercial está en `/comercial/`).
 Gratis de operar: la app vive en GitHub Pages (igual que la web) y los datos en Supabase gratis.
 La web comercial actual (`/`) no cambia.
 
@@ -27,11 +27,11 @@ Envía la oferta a los mejores 5 (8 si es urgente). El primero que acepta se que
 ### Dos ajustes que solo se hacen en el panel de Supabase (2 minutos)
 
 1. **Authentication → Sign In / Providers → Email**: apaga **Confirm email**. El correo gratis de Supabase solo envía a los miembros del equipo del proyecto, así que con la confirmación encendida ningún cliente podría registrarse. Cuando conectes un SMTP propio (por ejemplo Resend, gratis, con tu dominio) la vuelves a encender. En la misma pantalla sube la contraseña mínima a 8.
-2. **Authentication → URL Configuration**: Site URL y Redirect URLs = `https://www.wecleanitallfl.com/app/`
+2. **Authentication → URL Configuration**: Site URL y Redirect URLs = `https://www.wecleanitallfl.com/`
 
 ### Tu cuenta de dueño
 
-1. En `www.wecleanitallfl.com/app/` → "Necesito limpieza" → crea la cuenta con `wecleanitallfl@gmail.com`.
+1. En `www.wecleanitallfl.com` → "Necesito limpieza" → crea la cuenta con `wecleanitallfl@gmail.com`.
 2. Avísale a Claude (o corre esto en SQL Editor):
    ```sql
    insert into public.admins(user_id) select id from auth.users where email = 'wecleanitallfl@gmail.com';
