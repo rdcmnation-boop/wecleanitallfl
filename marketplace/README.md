@@ -38,6 +38,10 @@ Envía la oferta a los mejores 5 (8 si es urgente). El primero que acepta se que
    ```
 3. Sal y vuelve a entrar. La app te pide activar la **verificación en 2 pasos**: escanea el código con Google Authenticator, Microsoft Authenticator o 1Password. Sin ese código nadie entra al panel, aunque tenga tu contraseña.
 
+## Panel del dueño
+
+Panel (resumen + AI CEO), Analítica (7/30/90 días: pedidos, ventas, embudo, ZIPs, servicios, calificaciones, mejores limpiadores), Limpiadores, Pedidos y Sistema (Arquitectura de agentes, Mejoras automáticas, Actualizaciones y actividad en vivo, Clientes, Conectores, Cuenta). Datos de `marketplace/supabase/owner_analytics.sql`, solo para el dueño con verificación en 2 pasos.
+
 ## Seguridad
 
 - Cada tabla tiene Row Level Security: cada persona solo ve lo suyo.

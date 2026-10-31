@@ -1,6 +1,6 @@
 // Offline shell for the installed app (home page). Never caches account data or API calls.
-const CACHE = "wcia-app-v2";
-const SHELL = ["/", "/app/app.css", "/app/app.js", "/app/api.js", "/app/i18n.js", "/app/config.js", "/app/manifest.webmanifest", "/media/mark.svg", "/media/icon-180.png", "/media/icon-512.png"];
+const CACHE = "wcia-app-v3";
+const SHELL = ["/", "/app/app.css", "/app/app.js", "/app/api.js", "/app/owner.js", "/app/i18n.js", "/app/config.js", "/app/manifest.webmanifest", "/media/mark.svg", "/media/icon-180.png", "/media/icon-512.png"];
 
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));

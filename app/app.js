@@ -57,6 +57,7 @@
     shield: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/>',
     out: '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/>',
     globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/>',
+    chart: '<path d="M3 3v18h18"/><path d="M7 15v2M11 11v6M15 7v10M19 12v5"/>',
     file: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/>'
   };
   const icon = (n, cls) => '<svg class="ic ' + (cls || "") + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + I[n] + "</svg>";
@@ -126,11 +127,12 @@
   const TABS = {
     customer: [["book", "plus", "tab_book"], ["orders", "list", "tab_orders"], ["cleaners", "users", "tab_cleaners"], ["account", "user", "tab_account"]],
     worker: [["jobs", "spark", "tab_jobs"], ["myjobs", "check", "tab_myjobs"], ["earnings", "cash", "tab_earnings"], ["profile", "user", "tab_profile"]],
-    admin: [["panel", "grid", "tab_panel"], ["workers", "users", "tab_workers"], ["bookings", "list", "tab_bookings"], ["connectors", "plug", "tab_connectors"], ["account", "user", "tab_account"]]
+    admin: [["panel", "grid", "tab_panel"], ["analytics", "chart", "tab_analytics"], ["workers", "users", "tab_workers"], ["bookings", "list", "tab_bookings"], ["system", "spark", "tab_system"]]
   };
   function startRole() {
     S.screen = "app";
     const r = role();
+    document.body.classList.toggle("owner", r === "admin");
     const saved = store.get("wcia_tab_" + r, null);
     S.tab = TABS[r].some((x) => x[0] === saved) ? saved : TABS[r][0][0];
     if (r === "worker" && S.me.worker && (!S.me.worker.zips.length || !S.me.worker.services.length) && S.me.worker.status === "pending") S.tab = "profile";
@@ -150,7 +152,17 @@
       myjobs: async () => ({ jobs: await API.myJobs() }),
       earnings: async () => { await refreshMe(); return { jobs: await API.myJobs() }; },
       profile: async () => ({ docs: await API.listDocs(S.me.profile.id).catch(() => []) }),
-      panel: async () => { const stats = await API.adminStats(); S.data.stats = stats; render(); const ai = await API.aiBriefing(lang); return { stats, ai }; },
+      panel: async () => { const [stats, an] = await Promise.all([API.adminStats(), API.adminAnalytics(14)]); S.data.stats = stats; S.data.an = an; render(); const ai = await API.aiBriefing(lang); return { stats, an, ai }; },
+      analytics: async () => ({ an: await API.adminAnalytics(S.range || 30) }),
+      system: async () => {
+        const sys = S.sys || "architecture";
+        if (sys === "architecture") { const [stats, ai] = await Promise.all([API.adminStats(), S.data.ai !== undefined ? S.data.ai : API.aiBriefing(lang)]); return { stats, ai }; }
+        if (sys === "improve") { const [stats, an, workers] = await Promise.all([API.adminStats(), API.adminAnalytics(30), API.adminWorkers()]); return { stats, an, workers }; }
+        if (sys === "updates") return { activity: await API.adminActivity() };
+        if (sys === "customers") return { customers: await API.adminCustomers() };
+        if (sys === "connectors") return { stats: await API.adminStats() };
+        return {};
+      },
       workers: async () => ({ workers: await API.adminWorkers() }),
       bookings: async () => { const [bookings, workers] = await Promise.all([API.adminBookings(), API.adminWorkers()]); return { bookings, workers }; },
       connectors: async () => ({ stats: await API.adminStats() })
@@ -166,7 +178,7 @@
     setInterval(() => {
       if (document.hidden || !S.me || S.busy || S.screen !== "app") return;
       if (document.activeElement && /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)) return;
-      if (["jobs", "orders", "panel", "bookings", "myjobs"].includes(S.tab)) loadTab(true);
+      if (["jobs", "orders", "panel", "bookings", "myjobs", "analytics"].includes(S.tab) || (S.tab === "system" && S.sys === "updates")) loadTab(true);
       loadNotes();
     }, 20000);
     document.addEventListener("visibilitychange", () => { if (!document.hidden && S.me && S.screen === "app") { loadTab(true); loadNotes(); } });
@@ -273,7 +285,9 @@
     const r = role();
     const tabs = TABS[r];
     const bell = '<button class="bell" data-act="notes" aria-label="' + esc(t("notifications")) + '">' + icon("bell") + '<b class="dot" id="bell-dot" hidden></b></button>';
-    const views = { book: vBook, orders: vOrders, cleaners: vCleaners, account: vAccount, jobs: vJobs, myjobs: vMyJobs, earnings: vEarnings, profile: vProfile, panel: vPanel, workers: vWorkers, bookings: vAdminBookings, connectors: vConnectors };
+    const strip = (h) => h.replace(/^<h1 class="title">.*?<\/h1>/, "");
+    const views = { book: vBook, orders: vOrders, cleaners: vCleaners, account: vAccount, jobs: vJobs, myjobs: vMyJobs, earnings: vEarnings, profile: vProfile, panel: vPanel, workers: vWorkers, bookings: vAdminBookings, connectors: vConnectors,
+      analytics: () => owner().vAnalytics(), system: () => owner().vSystem({ connectors: () => strip(vConnectors()), account: () => strip(vAccount()) }) };
     return header(bell) + demoBanner() +
       '<main class="wrap app">' + (views[S.tab] ? views[S.tab]() : "") + "</main>" +
       '<nav class="tabbar n' + tabs.length + '" aria-label="Menu">' + tabs.map(([k, ic, lab]) =>
@@ -284,6 +298,8 @@
     const unread = S.notes.filter((n) => !n.read_at).length;
     dot.hidden = !unread; dot.textContent = unread > 9 ? "9+" : String(unread || "");
   }
+  let OWNER = null;
+  const owner = () => OWNER || (OWNER = window.WCIA_OWNER({ t, esc, icon, money, when, svcName, S, tile, loading, empty, wa, CFG, lang: () => lang }));
   const loading = () => '<div class="skeleton"><i></i><i></i><i></i></div>';
   const empty = (ic, title, sub, btn) => '<div class="empty">' + icon(ic, "xl") + "<h3>" + esc(title) + "</h3>" + (sub ? "<p>" + esc(sub) + "</p>" : "") + (btn || "") + "</div>";
 
@@ -516,7 +532,16 @@
     const s = S.data.stats;
     if (!s) return loading();
     const items = S.data.ai || rules(s);
-    return '<h1 class="title">' + esc(t("owner_panel")) + "</h1>" +
+    const an = S.data.an;
+    const hr = new Date().getHours();
+    const hello = (lang === "es" ? (hr < 12 ? "Buenos días" : hr < 19 ? "Buenas tardes" : "Buenas noches") : (hr < 12 ? "Good morning" : hr < 19 ? "Good afternoon" : "Good evening")) + ", " + esc((S.me.profile.full_name || "").split(" ")[0]);
+    const today = new Date().toLocaleDateString(lang === "es" ? "es-US" : "en-US", { weekday: "long", month: "long", day: "numeric" });
+    const week = an ? an.series.slice(-7).reduce((x, d) => x + d.created, 0) : null;
+    const hero = '<section class="owner-hero"><div><p class="eyebrow">' + icon("shield") + esc(t("owner_panel")) + "</p><h1>" + hello + "</h1><p class=\"muted\">" + esc(today) + "</p></div>" +
+      (an ? '<div class="hero-spark"><b>' + week + "</b><small>" + esc(lang === "es" ? "pedidos · 7 días" : "orders · 7 days") + "</small>" + owner().spark(an.series, "created") + "</div>" : "") + "</section>";
+    const quick = '<div class="quick">' + [["analytics", "chart", t("tab_analytics")], ["system", "grid", lang === "es" ? "Arquitectura" : "Architecture", "architecture"], ["system", "spark", lang === "es" ? "Mejoras" : "Improvements", "improve"], ["system", "users", lang === "es" ? "Clientes" : "Customers", "customers"]]
+      .map(([tb, ic, lb, sy]) => '<button class="q" data-act="' + (sy ? "sys" : "tab") + '" data-tab="' + tb + '" data-s="' + (sy || "") + '">' + icon(ic) + "<span>" + esc(lb) + "</span></button>").join("") + "</div>";
+    return hero + quick +
       '<section class="ceo card"><div class="row between"><p class="eyebrow">' + icon("spark") + esc(t("ai_ceo")) + " · " + esc(t("ai_briefing")) + '</p><span class="pill">' + esc(S.data.ai ? t("ai_live") : t("ai_rules")) + "</span></div>" +
       '<ul class="brief">' + items.map((i) => '<li class="' + esc(i.level) + '"' + (i.tab ? ' data-act="tab" data-tab="' + i.tab + '" role="button" tabindex="0"' : "") + "><i></i><span>" + esc(i.text) + "</span></li>").join("") + "</ul></section>" +
       '<div class="tiles">' + tile(t("m_unmatched"), s.bookings_unmatched, s.bookings_unmatched ? "bad" : "", "bookings") + tile(t("m_pending"), s.workers_pending, s.workers_pending ? "warn" : "", "workers") +
@@ -525,6 +550,7 @@
       tile(t("m_done30"), s.bookings_completed_30d) + tile(t("m_gmv"), money(s.gmv_30d), "lime") + "</div>" +
       '<button class="btn ghost block" data-act="reload">' + esc(t("refresh")) + "</button>";
   }
+  // keep the old title out of the new hero layout
   function vWorkers() {
     const all = S.data.workers;
     if (S.data.loading && !all) return loading();
@@ -656,6 +682,8 @@
     else if (a === "start") { await run(() => API.startJob(id)).catch(() => {}); loadTab(true); }
     else if (a === "complete") { await run(() => API.completeJob(id)).catch(() => {}); loadTab(true); }
     else if (a === "wfilter") { S.filter = el.dataset.f; render(); }
+    else if (a === "range") { S.range = Number(el.dataset.d); S.data.an = null; render(); loadTab(true); }
+    else if (a === "sys") { S.tab = "system"; S.sys = el.dataset.s || "architecture"; store.set("wcia_tab_" + role(), "system"); S.data = {}; loadTab(); }
     else if (a === "bfilter") { S.bfilter = el.dataset.f; render(); }
     else if (a === "wstatus") { await run(() => API.adminSetWorkerStatus(id, el.dataset.s), t("saved")).catch(() => {}); loadTab(true); }
     else if (a === "assign") {
@@ -671,6 +699,22 @@
     }
     else if (a === "opendoc") { const u = await API.docUrl(el.dataset.path); if (u) window.open(u, "_blank", "noopener"); }
   });
+  // Chart tooltips: hover on desktop, tap on phones.
+  const tipEl = document.createElement("div"); tipEl.className = "tip"; tipEl.setAttribute("role", "tooltip"); document.body.appendChild(tipEl);
+  function showTip(e) {
+    const el = e.target.closest && e.target.closest("[data-tip]");
+    if (!el) { tipEl.classList.remove("in"); return; }
+    tipEl.textContent = el.dataset.tip;
+    const r = el.getBoundingClientRect();
+    tipEl.classList.add("in");
+    const w = tipEl.offsetWidth;
+    tipEl.style.left = Math.max(8, Math.min(innerWidth - w - 8, r.left + r.width / 2 - w / 2)) + "px";
+    tipEl.style.top = Math.max(8, r.top - tipEl.offsetHeight - 8) + "px";
+  }
+  root.addEventListener("mouseover", showTip);
+  root.addEventListener("pointerdown", (e) => { if (e.pointerType !== "mouse") showTip(e); });
+  root.addEventListener("mouseleave", () => tipEl.classList.remove("in"));
+  window.addEventListener("scroll", () => tipEl.classList.remove("in"), { passive: true });
   root.addEventListener("keydown", (e) => {
     if ((e.key === "Enter" || e.key === " ") && e.target.matches('[role="button"][data-act]')) { e.preventDefault(); e.target.click(); }
   });

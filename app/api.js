@@ -156,6 +156,9 @@
       notifications: () => rest("/notifications?select=id,template,payload,created_at,read_at&channel=eq.inapp&order=created_at.desc&limit=30"),
       markRead: () => rpc("mark_notifications_read"),
       adminStats: () => rpc("admin_stats"),
+      adminAnalytics: (days) => rpc("admin_analytics", { p_days: days || 30 }),
+      adminCustomers: () => rpc("admin_customers"),
+      adminActivity: () => rpc("admin_activity"),
       adminWorkers: () => rpc("admin_workers"),
       adminBookings: () => rpc("admin_bookings"),
       adminSetWorkerStatus: (id, s) => rpc("admin_set_worker_status", { p_worker: id, p_status: s }),
@@ -426,6 +429,43 @@
           top_services_30d: count(db.bookings.filter((b) => recent(b.created_at)), "service"),
           whatsapp_queued: db.notes.filter((n) => n.channel === "whatsapp" && n.status === "queued").length
         };
+      },
+      async adminAnalytics(days) {
+        await tick(); const db = load(); if (!isAdmin(db)) return null;
+        const n = Math.max(7, Math.min(365, days || 30)), d0 = new Date(); d0.setHours(0, 0, 0, 0); d0.setDate(d0.getDate() - (n - 1));
+        const key = (iso) => { const d = new Date(iso); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); };
+        const B = db.bookings.filter((b) => Date.parse(b.created_at) >= d0.getTime());
+        const series = [];
+        for (let i = 0; i < n; i++) { const d = new Date(d0); d.setDate(d.getDate() + i); const k = key(d.toISOString()); series.push({ day: k, created: B.filter((b) => key(b.created_at) === k).length, completed: db.bookings.filter((b) => b.completed_at && key(b.completed_at) === k).length, gmv: db.bookings.filter((b) => b.status === "completed" && b.completed_at && key(b.completed_at) === k).reduce((s, b) => s + (Number(b.budget) || 0), 0), signups: db.profiles.filter((p) => key(p.created_at) === k).length }); }
+        const O = db.offers.filter((o) => B.some((b) => b.id === o.booking_id)), dec = O.filter((o) => ["accepted", "declined"].includes(o.status));
+        const asg = B.filter((b) => b.assigned_at);
+        const grp = (arr, f) => arr.reduce((m, x) => ((m[f(x)] = m[f(x)] || []).push(x), m), {});
+        const rv = db.reviews;
+        return {
+          days: n, series,
+          funnel: { created: B.length, offered: B.filter((b) => db.offers.some((o) => o.booking_id === b.id)).length, assigned: asg.length, completed: B.filter((b) => b.status === "completed").length, cancelled: B.filter((b) => b.status === "cancelled").length },
+          avg_minutes_to_assign: asg.length ? Math.round(asg.reduce((s, b) => s + (Date.parse(b.assigned_at) - Date.parse(b.created_at)) / 6e4, 0) / asg.length * 10) / 10 : null,
+          acceptance_rate: dec.length ? Math.round(1000 * O.filter((o) => o.status === "accepted").length / dec.length) / 10 : null,
+          avg_ticket: B.filter((b) => b.budget != null).length ? Math.round(B.reduce((s, b) => s + (Number(b.budget) || 0), 0) / B.filter((b) => b.budget != null).length) : null,
+          repeat_customers: Object.values(grp(db.bookings.filter((b) => b.status === "completed"), (b) => b.customer_id)).filter((a) => a.length > 1).length,
+          ratings: { 1: rv.filter((r) => r.rating === 1).length, 2: rv.filter((r) => r.rating === 2).length, 3: rv.filter((r) => r.rating === 3).length, 4: rv.filter((r) => r.rating === 4).length, 5: rv.filter((r) => r.rating === 5).length },
+          services: Object.entries(grp(B, (b) => b.service + "|" + b.segment)).map(([k, a]) => ({ service: k.split("|")[0], segment: k.split("|")[1], n: a.length, avg_budget: a.filter((b) => b.budget != null).length ? Math.round(a.reduce((s, b) => s + (Number(b.budget) || 0), 0) / a.filter((b) => b.budget != null).length) : null })).sort((a, b) => b.n - a.n),
+          zips: Object.entries(grp(B, (b) => b.zip)).map(([z, a]) => ({ zip: z, demand: a.length, unmatched: a.filter((b) => b.status === "requested").length, cleaners: db.workers.filter((w) => w.status === "approved" && w.zips.includes(z)).length })).sort((a, b) => b.demand - a.demand).slice(0, 12),
+          top_workers: db.workers.filter((w) => w.status === "approved").map((w) => { const p = P(db, w.id), wo = db.offers.filter((o) => o.worker_id === w.id), wd = wo.filter((o) => ["accepted", "declined"].includes(o.status)); return { id: w.id, name: p.full_name, company_name: w.company_name, rating: w.rating_avg, rating_count: w.rating_count, done: w.jobs_done, available: w.available, acceptance: wd.length ? Math.round(100 * wo.filter((o) => o.status === "accepted").length / wd.length) : null, pending_offers: wo.filter((o) => o.status === "sent").length }; }).sort((a, b) => b.done - a.done || b.rating - a.rating).slice(0, 10)
+        };
+      },
+      async adminCustomers() {
+        await tick(); const db = load(); need(isAdmin(db), "admin_only");
+        return db.profiles.filter((p) => p.role === "customer").map((p) => { const bs = db.bookings.filter((b) => b.customer_id === p.id); return Object.assign({}, p, { bookings: bs.length, completed: bs.filter((b) => b.status === "completed").length, spent: bs.filter((b) => b.status === "completed").reduce((s, b) => s + (Number(b.budget) || 0), 0), last_booking: bs.map((b) => b.created_at).sort().pop() || null }); }).sort((a, b) => b.created_at.localeCompare(a.created_at));
+      },
+      async adminActivity() {
+        await tick(); const db = load(); need(isAdmin(db), "admin_only");
+        const ev = [];
+        db.bookings.forEach((b) => { const c = P(db, b.customer_id); ev.push({ action: "booking_created", details: { code: b.code }, created_at: b.created_at, actor: c ? c.full_name : "Sistema" });
+          if (b.assigned_at) { const w = P(db, b.worker_id); ev.push({ action: "offer_accepted", details: { code: b.code }, created_at: b.assigned_at, actor: w ? w.full_name : "Sistema" }); }
+          if (b.cancelled_at) ev.push({ action: "booking_cancelled", details: { code: b.code }, created_at: b.cancelled_at, actor: c ? c.full_name : "Sistema" }); });
+        db.workers.filter((w) => w.approved_at).forEach((w) => ev.push({ action: "worker_approved", details: {}, created_at: w.approved_at, actor: "Rolando (Dueño)" }));
+        return ev.sort((a, b) => b.created_at.localeCompare(a.created_at)).slice(0, 60);
       },
       async adminWorkers() {
         await tick(); const db = load(); need(isAdmin(db), "admin_only");

@@ -28,7 +28,7 @@ window.WCIA_I18N = {
     // tabs
     tab_book: "Pedir", tab_orders: "Mis pedidos", tab_cleaners: "Limpiadores", tab_account: "Cuenta",
     tab_jobs: "Trabajos", tab_myjobs: "Mis trabajos", tab_earnings: "Ganancias", tab_profile: "Perfil",
-    tab_panel: "Panel", tab_workers: "Limpiadores", tab_bookings: "Pedidos", tab_connectors: "Conectores",
+    tab_panel: "Panel", tab_analytics: "Analítica", tab_system: "Sistema", tab_workers: "Limpiadores", tab_bookings: "Pedidos", tab_connectors: "Conectores",
     // booking
     book_title: "¿Qué necesitas limpiar?",
     residential: "Casa", commercial: "Negocio",
@@ -159,7 +159,7 @@ window.WCIA_I18N = {
     error_generic: "Something went wrong. Try again.",
     tab_book: "Book", tab_orders: "My orders", tab_cleaners: "Cleaners", tab_account: "Account",
     tab_jobs: "Jobs", tab_myjobs: "My jobs", tab_earnings: "Earnings", tab_profile: "Profile",
-    tab_panel: "Panel", tab_workers: "Cleaners", tab_bookings: "Orders", tab_connectors: "Connectors",
+    tab_panel: "Panel", tab_analytics: "Analytics", tab_system: "System", tab_workers: "Cleaners", tab_bookings: "Orders", tab_connectors: "Connectors",
     book_title: "What needs cleaning?",
     residential: "Home", commercial: "Business",
     svc_standard: "Standard cleaning", svc_deep: "Deep cleaning", svc_move: "Move in / move out",
