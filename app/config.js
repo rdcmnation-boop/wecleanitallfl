@@ -16,7 +16,7 @@ window.WCIA_CONFIG = {
   GOOGLE_MAPS_KEY: "",
   // Brain assistants (customer, cleaner, owner). Keep false until the 'brain' function is deployed in Supabase
   // and ANTHROPIC_API_KEY is set. Demo mode always shows them.
-  BRAIN_ON: false,
+  BRAIN_ON: true,
   // Suggested hourly rate used only to pre-fill an estimate the customer can change.
   SUGGESTED_HOURLY: 30,
   // Owner contact shown to customers and cleaners.
