@@ -2,7 +2,7 @@
 window.WCIA_I18N = {
   es: {
     brand_sub: "Limpieza a tu medida",
-    hero_title: "Limpieza fácil. Trabajo justo.",
+    hero_title: "Limpieza fácil.",
     hero_sub: "Miami-Dade y Broward",
     need_cleaning: "Necesito limpieza",
     need_cleaning_sub: "Casa, apartamento o negocio",
@@ -135,7 +135,7 @@ window.WCIA_I18N = {
   },
   en: {
     brand_sub: "Cleaning made simple",
-    hero_title: "Easy cleaning. Fair work.",
+    hero_title: "Easy cleaning.",
     hero_sub: "Miami-Dade & Broward",
     need_cleaning: "I need cleaning",
     need_cleaning_sub: "Home, apartment or business",
