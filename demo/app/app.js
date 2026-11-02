@@ -776,7 +776,7 @@
     }
     radioState.loading = false;
     const manual = (window.WCIA_RADIO_MANUAL || []).filter((m) => m.region === reg).map((m) => ({ name: m.name, state: m.state || "", codec: "", bitrate: "", url_resolved: m.url || "", stationuuid: "", lastcheckok: 1, pending: !m.url }));
-    const direct = rows ? rows.filter(radioUsable).slice(0, 12) : null;
+    const direct = rows ? rows.filter(radioUsable).slice(0, 40) : null;
     radioState.list[reg] = !direct && !manual.length ? null : manual.concat(direct || []);
     if (!rows && !manual.length) radioState.error = t("radio_load_fail");
     refreshRadio();
