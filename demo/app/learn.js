@@ -221,3 +221,56 @@ window.WCIA_LEARN = {
     }
   }
 };
+
+// How to start a cleaning business. Shown to everyone in the Learn tab. General steps only:
+// not legal, tax or insurance advice. Official sources are named so people can check the current rules themselves.
+const STARTUP_ES = [
+  { id: "start-plan", title: "1. Antes de empezar: tu plan",
+    steps: ["Elige primero uno o dos servicios, por ejemplo limpieza regular de casas o cambios rápidos de Airbnb. Es más fácil controlar la calidad.", "Calcula tu costo real por trabajo: tu tiempo, productos, equipo, gasolina y el tiempo que pasas entre clientes.", "Escribe qué incluye cada servicio, qué no incluye y cuánto tarda. Así evitas malentendidos con el cliente.", "Antes de firmar nada, habla con un contador o abogado sobre cómo registrar tu negocio."],
+    quiz: [
+      { q: "¿Por qué conviene contar el tiempo de viaje entre trabajos?", o: ["No hace falta contarlo", "Es parte del costo real del día", "Solo importa si el cliente vive lejos"], a: 1, why: "El viaje gasta tiempo y gasolina. Si no lo cuentas, cobras menos de lo que te cuesta trabajar." }
+    ] },
+  { id: "start-legal", title: "2. Registro, impuestos y seguro",
+    steps: ["En Florida muchas personas registran su negocio como LLC. El registro se hace en sunbiz.org, de la División de Corporaciones de Florida.", "Puedes obtener un número de identificación fiscal (EIN) gratis en IRS.gov. Desconfía de sitios que cobran por ese trámite.", "Pregunta a tu ciudad o condado si necesitas un permiso de negocio local (Local Business Tax Receipt).", "Pregunta al Departamento de Ingresos de Florida si tus servicios pagan impuesto de ventas.", "Habla con un agente de seguros sobre responsabilidad civil general y, si tendrás empleados, compensación de trabajadores."],
+    quiz: [
+      { q: "¿Dónde puedes obtener un EIN gratis?", o: ["En IRS.gov", "Pagando a un sitio privado", "En una tienda de limpieza"], a: 0, why: "El IRS ofrece el EIN gratis en su sitio oficial. Otros sitios cobran por el mismo trámite." }
+    ] },
+  { id: "start-clients", title: "3. Conseguir clientes y reseñas",
+    steps: ["Crea un perfil de Google Business con tu nombre, tu zona de servicio y fotos reales de tu trabajo.", "Pide una reseña a cada cliente satisfecho y envíale el enlace directo a tu perfil.", "Pide referidos a vecinos, administradores de edificios y conocidos.", "No compres reseñas falsas ni prometas precios o fechas que no puedes cumplir."],
+    quiz: [
+      { q: "¿Qué ayuda más a conseguir clientes al principio?", o: ["Reseñas reales y referidos de clientes satisfechos", "Comprar reseñas falsas", "Prometer el precio más bajo sin calcularlo"], a: 0, why: "Las reseñas reales y los referidos generan confianza. Las falsas se pueden descubrir y dañan tu nombre." }
+    ] },
+  { id: "start-money", title: "4. Dinero: cobrar, guardar y apartar impuestos",
+    steps: ["Abre una cuenta bancaria solo para el negocio.", "Cobra con una factura escrita: fecha, servicio y monto.", "Guarda los recibos de productos, equipo y gasolina.", "Aparta una parte de cada pago para impuestos antes de gastarla."],
+    quiz: [
+      { q: "¿Para qué sirve una cuenta solo del negocio?", o: ["Para mezclar gastos personales y del negocio", "Para llevar cuentas claras y preparar los impuestos", "No sirve para nada"], a: 1, why: "Con cuentas separadas sabes cuánto ganas de verdad y es más fácil preparar los impuestos." }
+    ] },
+  { id: "start-team", title: "5. Si contratas: personas, capacitación y seguridad",
+    steps: ["Revisa antecedentes y referencias antes de dar acceso a casas o negocios.", "Haz una lista de tareas para cada servicio y entrénala en un trabajo acompañado.", "Define por escrito si la persona es empleada o contratista. Esa diferencia tiene reglas legales; consulta a un profesional.", "Ten un plan para emergencias: qué hacer si alguien se lastima, se intoxica o rompe algo del cliente."] }
+];
+const STARTUP_EN = [
+  { id: "start-plan", title: "1. Before you start: your plan",
+    steps: ["Start with one or two services, such as regular home cleaning or quick Airbnb turnovers. It is easier to keep quality high.", "Work out your real cost per job: your time, supplies, equipment, gas, and the time you spend between clients.", "Write down what each service includes, what it does not include, and how long it takes. This avoids misunderstandings with clients.", "Before you sign anything, talk to an accountant or lawyer about how to register your business."],
+    quiz: [
+      { q: "Why count the travel time between jobs?", o: ["You don't need to count it", "It is part of your real cost for the day", "It only matters if the client lives far away"], a: 1, why: "Travel costs time and gas. If you don't count it, you charge less than the work costs you." }
+    ] },
+  { id: "start-legal", title: "2. Registration, taxes and insurance",
+    steps: ["In Florida many people register their business as an LLC. Registration is done at sunbiz.org, the Florida Division of Corporations.", "You can get a federal Employer Identification Number (EIN) for free at IRS.gov. Be wary of sites that charge for this step.", "Ask your city or county whether you need a local business tax receipt.", "Ask the Florida Department of Revenue whether your services are subject to sales tax.", "Talk to an insurance agent about general liability and, if you will have employees, workers' compensation."],
+    quiz: [
+      { q: "Where can you get an EIN for free?", o: ["At IRS.gov", "From a private site that charges a fee", "At a cleaning supply store"], a: 0, why: "The IRS offers the EIN for free on its official site. Other sites charge for the same step." }
+    ] },
+  { id: "start-clients", title: "3. Getting clients and reviews",
+    steps: ["Create a Google Business Profile with your name, service area, and real photos of your work.", "Ask every happy client for a review and send them a direct link to your profile.", "Ask for referrals from neighbors, building managers, and people you know.", "Do not buy fake reviews or promise prices or dates you cannot keep."],
+    quiz: [
+      { q: "What helps most with new clients at the start?", o: ["Real reviews and referrals from happy clients", "Buying fake reviews", "Promising the lowest price without calculating it"], a: 0, why: "Real reviews and referrals build trust. Fake reviews can be discovered and damage your name." }
+    ] },
+  { id: "start-money", title: "4. Money: get paid, keep records, set tax aside",
+    steps: ["Open a bank account used only for the business.", "Bill with a written invoice: date, service, and amount.", "Keep receipts for supplies, equipment, and gas.", "Set aside part of every payment for taxes before you spend it."],
+    quiz: [
+      { q: "What is a business-only account for?", o: ["Mixing personal and business spending", "Keeping clear records and preparing taxes", "It is not useful"], a: 1, why: "Separate accounts show what you really earn and make taxes easier to prepare." }
+    ] },
+  { id: "start-team", title: "5. If you hire: people, training and safety",
+    steps: ["Check background and references before giving anyone access to homes or businesses.", "Make a task list for each service and train it on a supervised job.", "Decide in writing whether a person is an employee or a contractor. The difference has legal rules; ask a professional.", "Have an emergency plan: what to do if someone is hurt, exposed to chemicals, or breaks something belonging to the client."] }
+];
+window.WCIA_LEARN.es.startup = STARTUP_ES;
+window.WCIA_LEARN.en.startup = STARTUP_EN;

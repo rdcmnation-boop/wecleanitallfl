@@ -1,6 +1,8 @@
 // Text in Spanish and English. Keep words few and plain.
 window.WCIA_I18N = {
   es: {
+    now_title: "¿Necesitas limpieza ya?", now_hint: "Elige el servicio y tu código postal. Los limpiadores disponibles en tu zona reciben la solicitud primero.", now_live: "En vivo", now_btn: "Buscar limpiador ahora", now_fine: "Te mostramos en Pedidos cuando un limpiador acepte.",
+    learn_start_title: "Cómo empezar tu negocio de limpieza", learn_start_hint: "Pasos generales para quien quiere empezar. No es asesoría legal, de impuestos ni de seguros; confírmalo con un profesional.",
     brand_sub: "Limpieza a tu medida",
     hero_title: "Limpieza fácil.",
     hero_sub: "Miami-Dade y Broward",
@@ -146,6 +148,8 @@ window.WCIA_I18N = {
     err_date_far: "Escoge una fecha dentro de los próximos 6 meses."
   },
   en: {
+    now_title: "Need a cleaner now?", now_hint: "Pick a service and your ZIP code. Cleaners who are online in your area get the request first.", now_live: "Live", now_btn: "Find a cleaner now", now_fine: "We'll show you in Orders when a cleaner accepts.",
+    learn_start_title: "How to start your cleaning business", learn_start_hint: "General steps for anyone starting out. Not legal, tax or insurance advice; confirm those with a professional.",
     brand_sub: "Cleaning made simple",
     hero_title: "Easy cleaning.",
     hero_sub: "Miami-Dade & Broward",

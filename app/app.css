@@ -464,3 +464,28 @@ select{appearance:none;background-image:linear-gradient(45deg,transparent 50%,va
 .bar i{display:block;height:100%;background:var(--lime)}
 .rv{border-top:1px solid rgba(255,255,255,.08);padding:10px 0}
 .rv-modal{max-height:85vh;overflow:auto}
+
+/* "Need a cleaner now": dark glass card with a glowing ring, a 3D press button and a gentle tilt on hover. */
+.now-card{position:relative;overflow:hidden;isolation:isolate;margin:8px 0 18px;padding:20px 18px 18px;border-radius:26px;display:flex;flex-direction:column;gap:12px;
+  background:radial-gradient(120% 90% at 100% -10%,rgba(162,234,79,.28),transparent 55%),radial-gradient(90% 70% at 0% 110%,rgba(95,174,37,.22),transparent 60%),linear-gradient(165deg,#12281a 0%,#07110b 62%,#050a07 100%);
+  border:1px solid rgba(162,234,79,.38);
+  box-shadow:0 34px 60px -32px rgba(162,234,79,.55),0 0 0 1px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.12),inset 0 -20px 40px -30px rgba(162,234,79,.25);
+  transform-style:preserve-3d;transition:transform .45s cubic-bezier(.2,.8,.2,1)}
+.now-card::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:linear-gradient(115deg,transparent 35%,rgba(255,255,255,.07) 48%,transparent 60%);transform:translateZ(1px)}
+@media (hover:hover){.now-card:hover{transform:rotateX(2deg) rotateY(-3deg) translateZ(4px)}}
+.now-orb{position:absolute;right:-42px;top:-44px;width:172px;height:172px;transform:rotateX(62deg) rotateZ(-14deg);pointer-events:none;z-index:-1}
+.now-orb i{position:absolute;inset:0;border-radius:50%;border:2px solid rgba(162,234,79,.55);box-shadow:0 0 18px rgba(162,234,79,.35);animation:nowring 2.8s ease-out infinite;opacity:0}
+.now-orb i:nth-child(2){animation-delay:.93s}
+.now-orb i:nth-child(3){animation-delay:1.87s}
+@keyframes nowring{0%{transform:scale(.25);opacity:.95}100%{transform:scale(1.25);opacity:0}}
+.now-kicker{margin:0;display:inline-flex;align-items:center;gap:8px;align-self:flex-start;padding:6px 12px;border-radius:999px;background:rgba(162,234,79,.12);box-shadow:inset 0 0 0 1px rgba(162,234,79,.35);font:800 11px/1 var(--display);letter-spacing:.16em;text-transform:uppercase;color:var(--lime-hot)}
+.now-kicker b{width:8px;height:8px;border-radius:50%;background:var(--lime);box-shadow:0 0 10px var(--lime),0 0 2px #fff;animation:pulse 1.6s ease-in-out infinite}
+.now-title{margin:4px 0 0;font:800 30px/1.08 var(--display);letter-spacing:-.01em;background:linear-gradient(180deg,#ffffff 0%,#d6f5b0 70%,#a2ea4f 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+.now-hint{margin:0;color:var(--muted);font-size:15px}
+.now-form{position:relative;z-index:1;gap:12px}
+.now-form .field input{background:rgba(3,6,5,.7);border-color:rgba(162,234,79,.22)}
+.now-form .chip span{background:rgba(3,6,5,.7)}
+.now-go{position:relative;margin-top:4px;min-height:62px;font-size:18px;letter-spacing:.01em;box-shadow:0 7px 0 #3f7019,0 0 0 1px rgba(220,255,173,.6),0 18px 34px -12px rgba(162,234,79,.85),0 0 28px rgba(162,234,79,.35);transform:translateY(0)}
+.now-go:active{transform:translateY(5px);box-shadow:0 2px 0 #3f7019,0 0 0 1px rgba(220,255,173,.6),0 8px 18px -10px rgba(162,234,79,.8)}
+.now-go .ic{width:20px;height:20px}
+@media (prefers-reduced-motion:reduce){.now-orb i,.now-kicker b{animation:none}.now-card,.now-card:hover{transform:none}}

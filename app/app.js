@@ -501,6 +501,23 @@
       '<p class="label small">' + esc(t("pick_time")) + '</p><div class="chips">' + timeChips + "</div>" +
       '<input type="hidden" name="scheduled_at" value="' + esc(f.scheduled_at || "") + '">';
   }
+  // "Need a cleaner now": one short card at the top of Book. It sends an ASAP request with a standard size
+  // and the suggested price, through the same checks and guest step as the full form.
+  function nowCard() {
+    const n = S.form.now || (S.form.now = { service: "standard", zip: "", address: "" });
+    const guest = S.me.isGuest ? field("g_name", t("full_name"), "text", 'required maxlength="120" autocomplete="name"', null, S.me.profile.full_name) +
+      field("g_phone", t("phone"), "tel", 'required inputmode="tel" maxlength="20" autocomplete="tel"', null, S.me.profile.phone) : "";
+    return '<section class="now-card"><div class="now-orb" aria-hidden="true"><i></i><i></i><i></i></div>' +
+      '<p class="now-kicker"><b></b>' + esc(t("now_live")) + "</p>" +
+      '<h2 class="now-title">' + esc(t("now_title")) + "</h2>" +
+      '<p class="now-hint">' + esc(t("now_hint")) + "</p>" +
+      '<form class="now-form stack" data-form="now" novalidate>' + guest +
+      chips("now_service", SERVICES.residential.map((s) => [s, svcName(s)]), [n.service]) +
+      '<div class="row2">' + field("zip", t("zip"), "text", 'required inputmode="numeric" pattern="[0-9]{5}" maxlength="5" autocomplete="postal-code"', null, n.zip || "") +
+      field("address", t("address"), "text", 'maxlength="200" autocomplete="street-address"', t("address_private"), n.address || "") + "</div>" +
+      '<button class="btn solid block xl now-go" type="submit">' + icon("spark") + esc(t("now_btn")) + "</button>" +
+      '<p class="fine center">' + esc(t("now_fine")) + "</p></form></section>";
+  }
   function vBook() {
     const f = S.form.book || (S.form.book = { segment: "residential", service: "standard", bedrooms: 2, bathrooms: 1, frequency: "once", urgency: "scheduled" });
     const sg = suggest(f);
@@ -514,7 +531,7 @@
     const suggHtml = sugg.length ? '<div class="card"><p class="label">' + icon("users") + esc(t("suggested")) + '</p><div class="sugg">' + sugg.map((c) =>
       '<div class="sugg-c"><span class="av">' + esc((c.display_name || "?")[0]) + '</span><span><b>' + esc(c.display_name) + "</b><small>★ " + esc(String(c.rating_avg || "–")) + " · " + esc(String(c.jobs_done || 0)) + " " + esc(t("jobs_done_short")) + "</small></span>" +
       '<button type="button" class="btn ghost small" data-act="prefer" data-id="' + esc(c.id) + '">' + esc(t("pick")) + "</button></div>").join("") + "</div></div>" : "";
-    return '<h1 class="title">' + esc(t("book_title")) + "</h1>" +
+    return '<h1 class="title">' + esc(t("book_title")) + "</h1>" + nowCard() +
       '<form class="form stack" data-form="book" novalidate>' + guestCard + secO("what", t("sec_what")) +
       '<div class="seg big">' + [["residential", "home"], ["commercial", "building"]].map(([v, ic]) =>
         '<label class="seg-opt"><input type="radio" name="segment" value="' + v + '"' + (f.segment === v ? " checked" : "") + ">" + "<span>" + icon(ic) + esc(t(v)) + "</span></label>").join("") + "</div>" +
@@ -665,9 +682,12 @@
     const r = role();
     const track = r === "worker" ? L.cleaner : r === "admin" ? L.owner : L.customer;
     const list = (arr) => "<ul>" + arr.map((x) => "<li>" + esc(x) + "</li>").join("") + "</ul>";
-    const lessons = track.map((l) => '<section class="card stack learn"><p class="label">' + icon("spark") + esc(l.title) + "</p>" +
+    const lessonCards = (arr) => arr.map((l) => '<section class="card stack learn"><p class="label">' + icon("spark") + esc(l.title) + "</p>" +
       '<ol class="learn-steps">' + l.steps.map((s) => "<li>" + esc(s) + "</li>").join("") + "</ol>" +
       (l.quiz ? l.quiz.map((q, qi) => learnQuiz(l.id, qi, q)).join("") : "") + "</section>").join("");
+    const lessons = lessonCards(track);
+    // How to start a cleaning business: shown to everyone, before the role lessons.
+    const startupHtml = (L.startup || []).length ? '<section class="card stack"><p class="label">' + icon("spark") + esc(t("learn_start_title")) + "</p><p class=\"fine\">" + esc(t("learn_start_hint")) + "</p></section>" + lessonCards(L.startup) : "";
     const kit = L.kit;
     const kitHtml = '<section class="card stack"><p class="label">' + icon("list") + esc(t("learn_kit_title")) + "</p><p class=\"fine\">" + esc(t("learn_confirm")) + "</p>" +
       Object.keys(kit.services).map((k) => {
@@ -688,7 +708,7 @@
     // Sponsored partners: shown only when there are partners. Labeled, with a disclosure; they never change the safety lessons.
     const partnerRows = (L.partners || []).map((p) => '<li><b>' + esc(p.n) + '</b> <span class="fine">' + esc(p.what) + '</span> <a href="' + esc(p.url) + '" target="_blank" rel="noopener sponsored">' + esc(t("partners_visit")) + "</a></li>").join("");
     const partnersHtml = partnerRows ? '<section class="card stack"><p class="label">' + icon("users") + esc(t("partners_title")) + ' <span class="small">' + esc(t("partners_label")) + "</span></p><p class=\"fine\">" + esc(t("partners_disclosure")) + "</p><ul class=\"shop\">" + partnerRows + "</ul></section>" : "";
-    return '<h1 class="title">' + esc(t("learn_title")) + "</h1>" + '<p class="fine">' + esc(t("learn_hint")) + "</p>" + lessons + kitHtml + shopHtml + nearbyHtml + partnersHtml;
+    return '<h1 class="title">' + esc(t("learn_title")) + "</h1>" + '<p class="fine">' + esc(t("learn_hint")) + "</p>" + startupHtml + lessons + kitHtml + shopHtml + nearbyHtml + partnersHtml;
   }
   // One quiz question: tap an answer to check it; the right answer is marked and explained.
   function learnQuiz(lid, qi, q) {
@@ -1045,6 +1065,8 @@
     } else if (el.dataset.act === "setlang-profile") {
       await run(() => API.saveProfile(S.me.profile.id, Object.assign({}, S.me.profile, { language: el.value })), t("saved")).catch(() => {});
       await refreshMe();
+    } else if (el.form && el.form.dataset.form === "now") {
+      if (el.name === "now_service") S.form.now.service = el.value;
     } else if (el.form && el.form.dataset.form === "book") {
       syncBook(el.form);
       if (el.name === "sday" || el.name === "stime") { pickWhen(el.form); render(); return; }
@@ -1060,7 +1082,18 @@
       S.form.kind = el.value; root.querySelectorAll(".company-only").forEach((x) => x.classList.toggle("hide", el.value !== "company"));
     }
   });
-  root.addEventListener("input", (e) => { const el = e.target; if (el.form && el.form.dataset.form === "book") syncBook(el.form); });
+  root.addEventListener("input", (e) => {
+    const el = e.target;
+    if (el.form && el.form.dataset.form === "book") syncBook(el.form);
+    if (el.form && el.form.dataset.form === "now" && S.form.now && ["zip", "address"].includes(el.name)) S.form.now[el.name] = el.value;
+  });
+  // Values for the one-tap request, built the same way as the full form's request.
+  function nowDraft(d) {
+    const service = d.now_service || "standard";
+    const sg = suggest({ segment: "residential", bedrooms: 2, bathrooms: 1, service });
+    S.form.now = { service, zip: String(d.zip || "").trim(), address: String(d.address || "").trim() };
+    return { segment: "residential", service, frequency: "once", zip: S.form.now.zip, city: "", address: S.form.now.address, urgency: "asap", scheduled_at: "", notes: "", bedrooms: 2, bathrooms: 1, property_type: "", sqft: null, hours_est: sg.hours, budget: sg.budget, preferred_worker_id: null };
+  }
   // Google Maps link for the ZIP area only (never the street address). Shown as soon as 5 digits are typed.
   function zipMapHtml(z) {
     return /^\d{5}$/.test(String(z || ""))
@@ -1105,9 +1138,10 @@
       } else if (kind === "mfa") {
         await run(() => API.mfaVerify(S.mfa.factorId, d.code, !!d.remember));
         S.me = await API.me(); S.mfa = null; startRole();
-      } else if (kind === "book") {
-        syncBook(form);
-        const f = S.form.book;
+      } else if (kind === "book" || kind === "now") {
+        const now = kind === "now";
+        if (!now) syncBook(form);
+        const f = now ? nowDraft(d) : S.form.book;
         if (!/^\d{5}$/.test(f.zip || "")) { toast(t("zip_invalid"), "bad"); form.zip.focus(); return; }
         if (f.urgency === "scheduled" && !f.scheduled_at) { toast(t("date_needed"), "bad"); form.scheduled_at && form.scheduled_at.focus(); return; }
         let guestInfo = null;
@@ -1128,7 +1162,7 @@
         };
         if (guestInfo) { S.verify = { step: "email", row, info: guestInfo, phone: "" }; render(); return; } // human check first
         await run(() => API.createBooking(row));
-        S.form.book = null; S.form.prefCleaner = null;
+        if (now) S.form.now = null; else { S.form.book = null; S.form.prefCleaner = null; }
         toast(t("request_sent"), "ok");
         S.tab = "orders"; S.data = {}; loadTab();
         toast._later = setTimeout(() => { if (S.tab === "orders") toast(t("request_sent_sub"), "ok"); }, 2700);
