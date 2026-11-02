@@ -29,3 +29,6 @@ create trigger z_clear_location before update of status on public.bookings for e
 
 revoke all on function public.share_location(uuid, numeric, numeric) from public, anon;
 grant execute on function public.share_location(uuid, numeric, numeric) to authenticated;
+
+-- The trigger function is never called over RPC, so nobody needs execute on it. Also applied live as revoke_clear_location_anon.
+revoke execute on function public._clear_location() from public, anon;
