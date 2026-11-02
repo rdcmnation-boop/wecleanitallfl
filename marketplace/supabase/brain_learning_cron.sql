@@ -1,12 +1,21 @@
--- Nightly brain learning (06:00 UTC). Apply only after brain_learning.sql, and after the LEARN_SECRET function
--- secret is set to the same value as the Vault secret named 'brain_learn_secret'. The secret is not stored in this file.
+-- Nightly brain learning (06:00 UTC). Apply after brain_learning.sql.
+-- The shared secret is generated inside the database and stored in Vault. It is never written to this repository.
 -- Requires the pg_cron and pg_net extensions (available on Supabase).
 
 create extension if not exists pg_cron;
 create extension if not exists pg_net;
 
-select cron.unschedule('brain-learn-nightly')
-  where exists (select 1 from cron.job where jobname = 'brain-learn-nightly');
+do $$
+begin
+  if not exists (select 1 from vault.decrypted_secrets where name = 'brain_learn_secret') then
+    perform vault.create_secret(
+      replace(gen_random_uuid()::text, '-', '') || replace(gen_random_uuid()::text, '-', ''),
+      'brain_learn_secret'
+    );
+  end if;
+end $$;
+
+select cron.unschedule(jobid) from cron.job where jobname = 'brain-learn-nightly';
 
 select cron.schedule('brain-learn-nightly', '0 6 * * *', $$
   select net.http_post(

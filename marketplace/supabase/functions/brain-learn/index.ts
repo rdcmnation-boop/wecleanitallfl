@@ -1,8 +1,9 @@
 // Brain learning: reads the anonymized customer and worker questions from the last 7 days that are not learned yet,
 // drafts up to 5 general notes with Claude, and saves them as "pending". Nothing reaches users until the owner
 // sets a note's status to "active" (brain_notes). Called nightly by pg_cron (brain_learning_cron.sql).
-// Secrets: LEARN_SECRET (required, checked against the x-learn-secret header), ANTHROPIC_API_KEY, ANTHROPIC_MODEL (optional).
-// SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are provided by Supabase. Deploy with verify_jwt off: the secret header guards it.
+// Secrets: ANTHROPIC_API_KEY, ANTHROPIC_MODEL (optional). SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are provided by Supabase.
+// The x-learn-secret header is checked by the database (check_learn_secret), whose shared value lives in Vault.
+// This function never stores or sees that value. Deploy with verify_jwt off: the header check guards it.
 
 const env = (k: string, d = "") => Deno.env.get(k) ?? d;
 const json = (o: unknown, status = 200) =>
@@ -18,14 +19,20 @@ const RULES = [
 
 Deno.serve(async (req) => {
   if (req.method !== "POST") return json({ error: "method" }, 405);
-  const secret = env("LEARN_SECRET");
-  if (!secret || req.headers.get("x-learn-secret") !== secret) return json({ error: "forbidden" }, 403);
 
   const base = env("SUPABASE_URL").replace(/\/$/, "");
   const key = env("SUPABASE_SERVICE_ROLE_KEY");
   const anthropicKey = env("ANTHROPIC_API_KEY");
   if (!key || !anthropicKey) return json({ error: "config" }, 500);
   const H = { apikey: key, Authorization: "Bearer " + key, "Content-Type": "application/json" };
+
+  // Only the nightly job knows the shared value; the database compares it with the one in Vault.
+  const given = req.headers.get("x-learn-secret") ?? "";
+  const allowed = given
+    ? await fetch(base + "/rest/v1/rpc/check_learn_secret", { method: "POST", headers: H, body: JSON.stringify({ p: given }) })
+      .then((r) => (r.ok ? r.json() : false)).catch(() => false)
+    : false;
+  if (allowed !== true) return json({ error: "forbidden" }, 403);
 
   // Questions not learned yet (the newest 200 from the last 7 days).
   const since = new Date(Date.now() - 7 * 864e5).toISOString();

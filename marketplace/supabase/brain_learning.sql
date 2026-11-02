@@ -25,3 +25,17 @@ create table if not exists public.brain_questions (
 );
 alter table public.brain_questions enable row level security;
 create index if not exists brain_questions_unlearned on public.brain_questions (created_at) where learned = false;
+
+-- brain-learn asks this to check its header. The shared value stays in Vault; only the service role may call it.
+create or replace function public.check_learn_secret(p text)
+returns boolean
+language sql
+security definer
+set search_path = public, vault
+as $$
+  select p is not null and p <> '' and exists (
+    select 1 from vault.decrypted_secrets where name = 'brain_learn_secret' and decrypted_secret = p
+  );
+$$;
+revoke all on function public.check_learn_secret(text) from public, anon, authenticated;
+grant execute on function public.check_learn_secret(text) to service_role;
