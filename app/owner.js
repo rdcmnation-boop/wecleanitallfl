@@ -130,13 +130,26 @@
       const order = { urgent: 0, warn: 1, info: 2, good: 3 };
       return out.sort((x, y) => order[x.lvl] - order[y.lvl]);
     }
+    // Each improvement is shown under the agent responsible for that area. Agents only PROPOSE:
+    // none can change its own code, permissions, financial rules or safety policies. The owner decides.
+    const AREA_AGENT = { OPERATIONS: "operations", MARKETPLACE: "dispatch", FINANCE: "finance", BRAIN: "orchestrator" };
     function vImprove() {
       if (!S.data.stats || !S.data.an) return loading();
       const items = improvements(), es = L();
-      return '<p class="muted">' + esc(es ? "Se recalculan solas con tus datos en vivo cada vez que entras. Tú decides qué aplicar." : "Recomputed from live data every visit. You decide what to apply.") + "</p>" +
-        items.map((m) => '<article class="card imp ' + m.lvl + '"><div class="row between"><span class="imp-area">' + esc(m.area) + '</span><span class="imp-lvl">' + esc({ urgent: es ? "Urgente" : "Urgent", warn: es ? "Importante" : "Important", info: "Info", good: es ? "Oportunidad" : "Opportunity" }[m.lvl]) + "</span></div><h3>" + esc(m.title) + '</h3><p class="bio">' + esc(m.body) + "</p>" +
-          (m.cta ? (m.href ? '<a class="btn ' + (m.href.includes("wa.me") ? "wa" : "ghost") + ' small" target="_blank" rel="noopener" href="' + esc(m.href) + '">' + (m.href.includes("wa.me") ? icon("chat") : "") + esc(m.cta) + "</a>" :
-            '<button class="btn ghost small" data-act="' + (m.sys ? "sys" : "tab") + '" data-tab="' + esc(m.tab) + '" data-s="' + esc(m.sys || "") + '">' + esc(m.cta) + "</button>") : "") + "</article>").join("");
+      const lvl = (m) => esc({ urgent: es ? "Urgente" : "Urgent", warn: es ? "Importante" : "Important", info: "Info", good: es ? "Oportunidad" : "Opportunity" }[m.lvl]);
+      const card = (m) => '<article class="card imp ' + m.lvl + '"><div class="row between"><span class="imp-area">' + esc(m.area) + '</span><span class="imp-lvl">' + lvl(m) + "</span></div><h3>" + esc(m.title) + '</h3><p class="bio">' + esc(m.body) + "</p>" +
+        (m.cta ? (m.href ? '<a class="btn ' + (m.href.includes("wa.me") ? "wa" : "ghost") + ' small" target="_blank" rel="noopener" href="' + esc(m.href) + '">' + (m.href.includes("wa.me") ? icon("chat") : "") + esc(m.cta) + "</a>" :
+          '<button class="btn ghost small" data-act="' + (m.sys ? "sys" : "tab") + '" data-tab="' + esc(m.tab) + '" data-s="' + esc(m.sys || "") + '">' + esc(m.cta) + "</button>") : "") + "</article>";
+      const groups = {};
+      items.forEach((m) => { const ag = AREA_AGENT[m.area] || "orchestrator"; (groups[ag] = groups[ag] || []).push(m); });
+      const rk = { urgent: 0, warn: 1, good: 2, info: 3 }, worst = (k) => Math.min(...groups[k].map((m) => rk[m.lvl] ?? 3));
+      const order = ["orchestrator", "operations", "dispatch", "finance"].filter((k) => groups[k]).sort((x, y) => worst(x) - worst(y));
+      const note = '<section class="card"><p class="eyebrow">' + icon("shield") + esc(es ? "Reglas de las mejoras" : "Rules for improvements") + "</p><p class=\"muted ag-d\">" +
+        esc(es ? "Los agentes solo proponen. Ninguno puede cambiar su propio código, sus permisos, reglas de dinero ni políticas de seguridad: solo tú decides qué aplicar. Se recalculan con tus datos en vivo cada vez que entras."
+          : "Agents only propose. None can change its own code, permissions, money rules or safety policies: only you decide what to apply. Recomputed from live data every visit.") + "</p></section>";
+      const chips = '<div class="row" style="gap:8px;flex-wrap:wrap;margin:0 0 10px">' + order.map((k) => '<span class="pill">' + esc(k) + " · " + groups[k].length + "</span>").join("") + "</div>";
+      return note + chips + order.map((k) => '<p class="eyebrow" style="margin:14px 0 6px">' + esc((es ? "Propone: " : "Proposed by: ") + k) + "</p>" + groups[k].map(card).join("")).join("") +
+        (items.length ? "" : '<p class="muted">' + esc(es ? "Sin propuestas por ahora." : "No proposals right now.") + "</p>");
     }
 
     // ───────── Updates: release notes + live activity ─────────
