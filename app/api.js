@@ -19,6 +19,8 @@
     const URL_ = CFG.SUPABASE_URL.replace(/\/$/, "");
     const KEY = CFG.SUPABASE_ANON_KEY;
     const SKEY = "wcia_session";
+    const DKEY = "wcia_device"; // trusted-device secret (kept on purpose across sign-out)
+    const deviceToken = () => { const v = store.get(DKEY, null); return typeof v === "string" && v.length >= 32 ? v : null; };
     let session = store.get(SKEY, null);
     let refreshing = null;
 
@@ -59,7 +61,8 @@
 
     async function rest(path, method, body, extra) {
       const t = await token();
-      const headers = Object.assign({ apikey: KEY, "Content-Type": "application/json" }, t ? { Authorization: "Bearer " + t } : {}, extra || {});
+      const dev = t ? deviceToken() : null;
+      const headers = Object.assign({ apikey: KEY, "Content-Type": "application/json" }, t ? { Authorization: "Bearer " + t } : {}, dev ? { "x-device-token": dev } : {}, extra || {});
       return raw("/rest/v1" + path, { method: method || "GET", headers, body: body === undefined ? undefined : JSON.stringify(body) });
     }
     const rpc = (fn, args) => rest("/rpc/" + fn, "POST", args || {});
@@ -116,6 +119,7 @@
         if (!profile) return null;
         let worker = null;
         if (profile.role === "worker") { const w = await rest("/workers?select=*&id=eq." + profile.id); worker = w && w[0]; }
+        if (isAdminAccount && !isAdmin && deviceToken()) store.del(DKEY); // expired/revoked secret: drop it, ask for the code
         return { profile, worker, isAdmin: !!isAdmin, adminNeedsMfa: !!isAdminAccount && !isAdmin };
       },
       // 2-step verification (authenticator app) — required for owner powers.
@@ -134,11 +138,22 @@
         if (qr && !qr.startsWith("data:")) qr = "data:image/svg+xml;utf-8," + encodeURIComponent(qr);
         return { factorId: r.id, qr, secret: r.totp && r.totp.secret };
       },
-      async mfaVerify(factorId, code) {
+      async mfaVerify(factorId, code, remember) {
         const t = await token(); const h = { apikey: KEY, Authorization: "Bearer " + t, "Content-Type": "application/json" };
         const ch = await raw("/auth/v1/factors/" + factorId + "/challenge", { method: "POST", headers: h, body: "{}" });
         const r = await raw("/auth/v1/factors/" + factorId + "/verify", { method: "POST", headers: h, body: JSON.stringify({ challenge_id: ch.id, code: String(code).replace(/\D/g, "") }) });
         saveSession(r);
+        if (remember) { // trust this device: only possible right after a real 2-step code
+          const label = String((navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || "device").slice(0, 40);
+          const tok = await rpc("admin_trust_device", { p_label: label });
+          if (typeof tok === "string" && tok.length >= 32) store.set(DKEY, tok);
+        }
+      },
+      deviceStatus: () => rpc("admin_device_status"),
+      async revokeDevices(all) {
+        const n = await rpc("admin_revoke_devices", { p_all: !!all });
+        store.del(DKEY);
+        return n;
       },
       saveProfile: (id, p) => rest("/profiles?id=eq." + id, "PATCH", p, { Prefer: "return=minimal" }),
       saveWorker: (id, w) => rest("/workers?id=eq." + id, "PATCH", w, { Prefer: "return=minimal" }),
@@ -418,6 +433,8 @@
       async adminAgentLog() { return []; },
       async adminDecideApproval() {},
       async adminSetAgentStatus() {},
+      async deviceStatus() { return { this_device: false, active: 0 }; },
+      async revokeDevices() { return 0; },
       async adminLogAgentAction() { return 1; },
       async adminRequestApproval() { return "demo-approval"; },
       async adminStats() {

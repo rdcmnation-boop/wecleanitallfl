@@ -163,6 +163,7 @@
         if (sys === "customers") return { customers: await API.adminCustomers() };
         if (sys === "agents") { const [agents, pending, log] = await Promise.all([API.adminAgents(), API.adminPendingApprovals(), API.adminAgentLog(50)]); return { agents, pending, log }; }
         if (sys === "connectors") return { stats: await API.adminStats() };
+        if (sys === "account") return { dev: S.me && S.me.isAdmin ? await API.deviceStatus().catch(() => null) : null };
         return {};
       },
       workers: async () => ({ workers: await API.adminWorkers() }),
@@ -255,6 +256,7 @@
           '<form class="card form" data-form="mfa" novalidate>' +
           (!m.enrolled && m.qr ? '<img class="qr" src="' + esc(m.qr) + '" alt="QR" width="220" height="220"><p class="fine">' + esc(t("mfa_secret")) + '</p><code class="secret">' + esc(m.secret || "") + "</code>" : "") +
           field("code", t("mfa_code"), "text", 'required inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" autofocus') +
+          (m.enrolled ? '<label class="check"><input type="checkbox" name="remember" value="1"> <span>' + esc(t("mfa_remember")) + "</span></label>" : "") +
           '<button class="btn solid block" type="submit">' + esc(t("mfa_verify")) + '</button><p class="fine">' + esc(t("mfa_why")) + "</p></form>") +
         '<button class="link-btn center" data-act="skipmfa">' + esc(t("mfa_skip")) + "</button>";
     } else if (S.screen === "checkemail") {
@@ -420,6 +422,10 @@
       '<div class="card"><p class="label">' + icon("phone") + esc(t("install_app")) + '</p><p class="muted">' + esc(t("install_hint")) + "</p></div>" +
       '<div class="card"><p class="label">' + esc(t("help")) + '</p><div class="row gap"><a class="btn ghost small" href="' + tel(CFG.BUSINESS_PHONE) + '">' + icon("phone") + esc(t("call")) + "</a>" +
       '<a class="btn wa small" target="_blank" rel="noopener" href="' + wa(CFG.BUSINESS_PHONE, "") + '">' + icon("chat") + "WhatsApp</a></div></div>" +
+      (S.me.isAdmin && S.data && S.data.dev ? '<div class="card"><p class="label">' + icon("shield") + esc(t("dev_title")) + '</p><p class="muted">' +
+        esc(S.data.dev.this_device ? t("dev_this_yes") : t("dev_this_no")) + " " + esc(t("dev_count", { n: S.data.dev.active || 0 })) + '</p><div class="row gap">' +
+        (S.data.dev.this_device ? '<button class="btn ghost small" data-act="devforget">' + esc(t("dev_forget")) + "</button>" : "") +
+        ((S.data.dev.active || 0) > 0 ? '<button class="btn ghost small" data-act="devforgetall">' + esc(t("dev_forget_all")) + "</button>" : "") + "</div></div>" : "") +
       '<button class="btn ghost block" data-act="signout">' + icon("out") + esc(t("sign_out")) + "</button>" +
       (API.mode === "demo" ? '<button class="link-btn center" data-act="demoreset">Reset demo</button>' : "");
   }
@@ -658,6 +664,7 @@
     else if (a === "auth") { S.authRole = el.dataset.role; S.form.kind = "individual"; S.screen = "signup"; render(); }
     else if (a === "signin") { S.screen = "signin"; render(); }
     else if (a === "agentsall") { const off = ((S.data && S.data.agents) || []).filter((x) => x.status !== "active"); try { for (const x of off) await API.adminSetAgentStatus(x.agent, "active"); toast(t("saved")); } catch (err) { console.error(err); toast(t("error_generic"), "bad"); } loadTab(true); }
+    else if (a === "devforget" || a === "devforgetall") { try { await API.revokeDevices(a === "devforgetall"); toast(t("saved")); } catch (err) { console.error(err); } loadTab(true); }
     else if (a === "skipmfa") { S.skipMfa = true; S.mfa = null; startRole(); }
     else if (a === "forgot") { S.screen = "forgot"; render(); }
     else if (a === "home") { S.screen = "landing"; render(); }
@@ -798,7 +805,7 @@
       } else if (kind === "newpass") {
         await run(() => API.setPassword(d.password), t("saved")); S.me = await API.me(); afterLogin();
       } else if (kind === "mfa") {
-        await run(() => API.mfaVerify(S.mfa.factorId, d.code));
+        await run(() => API.mfaVerify(S.mfa.factorId, d.code, !!d.remember));
         S.me = await API.me(); S.mfa = null; startRole();
       } else if (kind === "book") {
         syncBook(form);

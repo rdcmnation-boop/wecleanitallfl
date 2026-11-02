@@ -129,6 +129,9 @@ window.WCIA_I18N = {
     mfa_code: "Código de 6 números", mfa_verify: "Verificar", mfa_login_sub: "Escribe el código de tu app de autenticación.",
     mfa_wrong: "Código incorrecto o vencido. Prueba el nuevo.", mfa_skip: "Entrar sin panel",
     mfa_why: "Aunque alguien robe tu contraseña, no podrá entrar a tu panel sin tu teléfono.",
+    mfa_remember: "Recordar este dispositivo 30 días (solo en tu propio teléfono)",
+    dev_title: "Dispositivos de confianza", dev_this_yes: "Este dispositivo no pide el código.", dev_this_no: "Este dispositivo pide el código al entrar.",
+    dev_count: "Dispositivos activos: {n}.", dev_forget: "Olvidar este dispositivo", dev_forget_all: "Olvidar todos",
     err_too_many: "Tienes 5 pedidos abiertos. Espera a que se completen o cancela uno.",
     err_rate: "Demasiados pedidos hoy. Intenta mañana o llama al dueño.",
     err_date_far: "Escoge una fecha dentro de los próximos 6 meses."
@@ -253,6 +256,9 @@ window.WCIA_I18N = {
     mfa_code: "6-digit code", mfa_verify: "Verify", mfa_login_sub: "Enter the code from your authenticator app.",
     mfa_wrong: "Wrong or expired code. Try the new one.", mfa_skip: "Continue without panel",
     mfa_why: "Even if someone steals your password, they can't open your panel without your phone.",
+    mfa_remember: "Remember this device for 30 days (only on your own phone)",
+    dev_title: "Trusted devices", dev_this_yes: "This device does not ask for the code.", dev_this_no: "This device asks for the code when you sign in.",
+    dev_count: "Active devices: {n}.", dev_forget: "Forget this device", dev_forget_all: "Forget all",
     err_too_many: "You have 5 open orders. Wait for them to finish or cancel one.",
     err_rate: "Too many orders today. Try tomorrow or call the owner.",
     err_date_far: "Pick a date within the next 6 months."
