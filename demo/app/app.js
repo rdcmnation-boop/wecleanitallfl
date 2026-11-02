@@ -331,7 +331,18 @@
   };
   const loading = () => '<div class="skeleton"><i></i><i></i><i></i></div>';
   // Live job timer (from the real start time) and an optional Google Map (needs CFG.GOOGLE_MAPS_KEY).
-  const jobTimer = (b) => b.status === "in_progress" && b.started_at ? '<p class="job-timer" data-started="' + esc(b.started_at) + '">' + icon("clock") + "<span>" + esc(t("timer_label")) + ' <b class="tval">--:--</b></span></p>' : "";
+  // Driver-style job timer: big elapsed time, pauses leave out the paused minutes. Ticks every second.
+  const jobTimer = (b) => b.status === "in_progress" && b.started_at ? '<p class="job-timer' + (b.paused_at ? " paused" : "") + '" data-started="' + esc(b.started_at) + '" data-paused-seconds="' + Number(b.paused_seconds || 0) + '"' + (b.paused_at ? ' data-paused-at="' + esc(b.paused_at) + '"' : "") + ">" + icon("clock") + "<span>" + esc(t("timer_label")) + ' <b class="tval">--:--</b>' + (b.paused_at ? ' <small class="paused-tag">' + esc(t("timer_paused")) + "</small>" : "") + "</span></p>" : "";
+  // Live local time and date (like a ride-app header), and the next booked visit. Clock ticks with the timers.
+  const clockText = () => new Date().toLocaleTimeString(lang === "en" ? "en-US" : "es-US", { hour: "numeric", minute: "2-digit", second: "2-digit" });
+  function dateStrip() {
+    const now = new Date();
+    const day = now.toLocaleDateString(lang === "en" ? "en-US" : "es-US", { weekday: "long", month: "long", day: "numeric" });
+    const next = (S.data.orders || []).filter((b) => b.urgency === "scheduled" && b.scheduled_at && new Date(b.scheduled_at) > now && !["completed", "cancelled"].includes(b.status))
+      .sort((a, b) => new Date(a.scheduled_at) - new Date(b.scheduled_at))[0];
+    return '<div class="date-strip"><p class="clock-line"><span class="clock-now" data-clock>' + esc(clockText()) + '</span><small>' + esc(t("clock_label")) + "</small></p>" +
+      '<p class="day-line"><span>' + esc(t("today")) + ", " + esc(day) + "</span>" + (next ? "<small>" + esc(t("next_visit")) + ": " + esc(when(next.scheduled_at)) + "</small>" : "") + "</p></div>";
+  }
   const jobMap = (b) => {
     if (!CFG.GOOGLE_MAPS_KEY) return "";
     const q = [b.address, b.city, b.zip, "FL"].filter(Boolean).join(", ");
@@ -340,11 +351,14 @@
   };
   const tickTimers = () => {
     document.querySelectorAll(".job-timer").forEach((el) => {
-      const s = Math.max(0, Math.floor((Date.now() - Date.parse(el.dataset.started)) / 1000));
+      const pausedNow = el.dataset.pausedAt ? Date.now() - Date.parse(el.dataset.pausedAt) : 0;
+      const s = Math.max(0, Math.floor((Date.now() - Date.parse(el.dataset.started) - pausedNow) / 1000) - Number(el.dataset.pausedSeconds || 0));
       const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), x = s % 60;
       const v = (h ? h + ":" : "") + String(m).padStart(2, "0") + ":" + String(x).padStart(2, "0");
       const b = el.querySelector(".tval"); if (b && b.textContent !== v) b.textContent = v;
     });
+    const nowText = clockText();
+    document.querySelectorAll("[data-clock]").forEach((el) => { if (el.textContent !== nowText) el.textContent = nowText; });
   };
   const tickLoc = () => document.querySelectorAll("[data-since]").forEach((el) => {
     const m = Math.floor((Date.now() - Date.parse(el.dataset.since)) / 60000);
@@ -531,7 +545,7 @@
     const suggHtml = sugg.length ? '<div class="card"><p class="label">' + icon("users") + esc(t("suggested")) + '</p><div class="sugg">' + sugg.map((c) =>
       '<div class="sugg-c"><span class="av">' + esc((c.display_name || "?")[0]) + '</span><span><b>' + esc(c.display_name) + "</b><small>★ " + esc(String(c.rating_avg || "–")) + " · " + esc(String(c.jobs_done || 0)) + " " + esc(t("jobs_done_short")) + "</small></span>" +
       '<button type="button" class="btn ghost small" data-act="prefer" data-id="' + esc(c.id) + '">' + esc(t("pick")) + "</button></div>").join("") + "</div></div>" : "";
-    return '<h1 class="title">' + esc(t("book_title")) + "</h1>" + nowCard() +
+    return '<h1 class="title">' + esc(t("book_title")) + "</h1>" + dateStrip() + nowCard() +
       '<form class="form stack" data-form="book" novalidate>' + guestCard + secO("what", t("sec_what")) +
       '<div class="seg big">' + [["residential", "home"], ["commercial", "building"]].map(([v, ic]) =>
         '<label class="seg-opt"><input type="radio" name="segment" value="' + v + '"' + (f.segment === v ? " checked" : "") + ">" + "<span>" + icon(ic) + esc(t(v)) + "</span></label>").join("") + "</div>" +
@@ -570,7 +584,7 @@
     if (S.data.loading && !S.data.orders) return loading();
     const list = S.data.orders || [];
     if (!list.length) return empty("list", t("no_orders"), "", '<button class="btn solid" data-act="tab" data-tab="book">' + esc(t("book_now")) + "</button>");
-    return '<h1 class="title">' + esc(t("tab_orders")) + "</h1>" + list.map((b) => {
+    return '<h1 class="title">' + esc(t("tab_orders")) + "</h1>" + dateStrip() + list.map((b) => {
       const w = b.worker;
       const status = '<span class="pill st-' + b.status + '">' + esc(t("st_" + b.status)) + "</span>";
       return '<article class="card order">' +
@@ -705,10 +719,13 @@
     // Nearby stores for price checks and rentals (from NEARBY in learn.js). Not partners: no link earns money.
     const nearbyRows = (L.nearby || []).map((x) => '<li><b>' + esc(x.n) + '</b> <span class="fine">' + esc(x.a) + '</span><span class="shop-links"><a href="' + esc(x.map) + '" target="_blank" rel="noopener">Google Maps</a> · <a href="tel:' + esc(x.tel) + '">' + esc(x.tel) + "</a></span></li>").join("");
     const nearbyHtml = nearbyRows ? '<section class="card stack"><p class="label">' + icon("cash") + esc(t("learn_near_title")) + "</p><p class=\"fine\">" + esc(t("learn_near_hint")) + "</p><ul class=\"shop\">" + nearbyRows + "</ul></section>" : "";
+    // Cleaning industry news (from NEWS in learn.js): newest first, each with its date and source link.
+    const newsRows = (L.news || []).map((n) => '<li><b>' + esc(n.text) + '</b><span class="fine">' + esc(new Date(n.date + "T12:00:00").toLocaleDateString(lang === "en" ? "en-US" : "es-US", { year: "numeric", month: "short", day: "numeric" })) + " · " + esc(t("news_source")) + ': <a href="' + esc(n.url) + '" target="_blank" rel="noopener">' + esc(n.src) + "</a></span></li>").join("");
+    const newsHtml = newsRows ? '<section class="card stack"><p class="label">' + icon("spark") + esc(t("news_title")) + "</p><p class=\"fine\">" + esc(t("news_hint")) + "</p><ul class=\"shop\">" + newsRows + "</ul></section>" : "";
     // Sponsored partners: shown only when there are partners. Labeled, with a disclosure; they never change the safety lessons.
     const partnerRows = (L.partners || []).map((p) => '<li><b>' + esc(p.n) + '</b> <span class="fine">' + esc(p.what) + '</span> <a href="' + esc(p.url) + '" target="_blank" rel="noopener sponsored">' + esc(t("partners_visit")) + "</a></li>").join("");
     const partnersHtml = partnerRows ? '<section class="card stack"><p class="label">' + icon("users") + esc(t("partners_title")) + ' <span class="small">' + esc(t("partners_label")) + "</span></p><p class=\"fine\">" + esc(t("partners_disclosure")) + "</p><ul class=\"shop\">" + partnerRows + "</ul></section>" : "";
-    return '<h1 class="title">' + esc(t("learn_title")) + "</h1>" + '<p class="fine">' + esc(t("learn_hint")) + "</p>" + startupHtml + lessons + kitHtml + shopHtml + nearbyHtml + partnersHtml;
+    return '<h1 class="title">' + esc(t("learn_title")) + "</h1>" + '<p class="fine">' + esc(t("learn_hint")) + "</p>" + startupHtml + lessons + kitHtml + shopHtml + newsHtml + nearbyHtml + partnersHtml;
   }
   // One quiz question: tap an answer to check it; the right answer is marked and explained.
   function learnQuiz(lid, qi, q) {
@@ -721,11 +738,96 @@
     const fb = pick === null ? "" : '<p class="fine"><b>' + esc(pick === q.a ? t("learn_right") : t("learn_wrong")) + "</b> " + esc(q.why) + "</p>";
     return '<div class="learn-q"><p><b>' + esc(q.q) + "</b></p>" + opts + fb + "</div>";
   }
+  // ── cleaners: radio while working. Live station list from the public Radio Browser directory (Florida and Perú).
+  // Stations play inside the app through one audio element that stays alive when the screen changes.
+  const RADIO = { fl: { label: "Florida", q: "countrycode=US&state=Florida" }, pe: { label: "Perú", q: "countrycode=PE" } };
+  const RADIO_HOSTS = ["https://all.api.radio-browser.info", "https://de1.api.radio-browser.info"];
+  const radioState = { region: "fl", list: {}, loading: false, error: "", idx: -1, playing: false, asked: false, genre: "all" };
+  let radioAudio = null;
+  function radioEl() {
+    if (!radioAudio) {
+      radioAudio = document.createElement("audio");
+      radioAudio.preload = "none";
+      radioAudio.addEventListener("playing", () => { radioState.playing = true; refreshRadio(); });
+      radioAudio.addEventListener("pause", () => { radioState.playing = false; refreshRadio(); });
+      radioAudio.addEventListener("error", () => { if (radioState.idx >= 0) { radioState.error = t("radio_fail_play"); radioState.playing = false; refreshRadio(); } });
+      document.body.appendChild(radioAudio);
+    }
+    return radioAudio;
+  }
+  const radioUsable = (s) => s && typeof s.url_resolved === "string" && /^https:\/\//.test(s.url_resolved) && /^(MP3|AAC|AAC\+|OGG)$/i.test(s.codec || "") && s.lastcheckok !== 0;
+  function refreshRadio() { const el = document.getElementById("radioCard"); if (el) el.outerHTML = radioCard(); }
+  async function loadRadio(reg) {
+    if (reg !== radioState.region) { radioEl().pause(); radioState.idx = -1; radioState.playing = false; }
+    radioState.region = reg; radioState.error = "";
+    if (radioState.list[reg]) return refreshRadio();
+    radioState.loading = true; refreshRadio();
+    let rows = null;
+    for (const h of RADIO_HOSTS) {
+      try {
+        const r = await fetch(h + "/json/stations/search?" + RADIO[reg].q + (radioState.genre === "music" ? "&tag=music" : "") + "&order=clickcount&reverse=true&limit=40&hidebroken=true", { headers: { Accept: "application/json" } });
+        if (r.ok) { const j = await r.json(); if (Array.isArray(j)) { rows = j; break; } }
+      } catch (e) { /* try the next directory host */ }
+    }
+    radioState.loading = false;
+    const manual = (window.WCIA_RADIO_MANUAL || []).filter((m) => m.region === reg).map((m) => ({ name: m.name, state: m.state || "", codec: "", bitrate: "", url_resolved: m.url || "", stationuuid: "", lastcheckok: 1, pending: !m.url }));
+    const direct = rows ? rows.filter(radioUsable).slice(0, 12) : null;
+    radioState.list[reg] = !direct && !manual.length ? null : manual.concat(direct || []);
+    if (!rows && !manual.length) radioState.error = t("radio_load_fail");
+    refreshRadio();
+  }
+  function playRadio(i) {
+    const list = radioState.list[radioState.region]; const s = list && list[i];
+    if (!s) return;
+    if (s.pending || !/^https:\/\//.test(s.url_resolved || "")) { radioState.error = t("radio_pending"); return refreshRadio(); }
+    const a = radioEl();
+    radioState.idx = i; radioState.error = "";
+    a.src = s.url_resolved;
+    a.play().catch(() => { radioState.error = t("radio_fail_play"); radioState.playing = false; refreshRadio(); });
+    if (s.stationuuid) fetch(RADIO_HOSTS[0] + "/json/url/" + encodeURIComponent(s.stationuuid)).catch(() => {}); // the directory asks clients to count listens
+    refreshRadio();
+  }
+  // Playable stations (https stream, not pending), in list order. Used by tuning and the dial.
+  const radioOk = (list) => (list || []).map((s, i) => (!s.pending && /^https:\/\//.test(s.url_resolved || "") ? i : -1)).filter((i) => i >= 0);
+  function stepRadio(dir) {
+    const list = radioState.list[radioState.region]; const ok = radioOk(list);
+    if (!ok.length) return;
+    let k = ok.indexOf(radioState.idx);
+    k = k < 0 ? (dir > 0 ? 0 : ok.length - 1) : (k + dir + ok.length) % ok.length;
+    playRadio(ok[k]);
+  }
+  // Car-radio style card: neon screen with the station, equalizer, tuning dial, and transport buttons.
+  function radioCard() {
+    const reg = radioState.region, list = radioState.list[reg];
+    if (list === undefined && !radioState.loading && !radioState.asked) { radioState.asked = true; setTimeout(() => loadRadio(reg), 0); }
+    const regionBtns = Object.keys(RADIO).map((k) => '<button type="button" class="chip-btn' + (k === reg ? " on" : "") + '" data-act="radio-region" data-r="' + k + '">' + esc(RADIO[k].label) + "</button>").join("");
+    const genreBtns = [["all", t("radio_all")], ["music", t("radio_music")]].map(([g, l]) => '<button type="button" class="chip-btn' + (radioState.genre === g ? " on" : "") + '" data-act="radio-genre" data-g="' + g + '">' + esc(l) + "</button>").join("");
+    const cur = radioState.idx >= 0 && list && list[radioState.idx];
+    const ok = radioOk(list);
+    const pos = cur && ok.length > 1 ? Math.round((ok.indexOf(radioState.idx) / (ok.length - 1)) * 100) : 0;
+    const meta = cur ? [cur.state, cur.codec, cur.bitrate ? cur.bitrate + " kbps" : ""].filter(Boolean).join(" · ") : "";
+    const screen = '<div class="car-screen"><span class="car-tag' + (radioState.playing ? " live" : "") + '">' + esc(radioState.playing ? t("radio_live") : t("radio_ready")) + "</span>" +
+      '<b class="car-name">' + esc(cur ? cur.name : t("radio_pick")) + '</b><small class="car-meta">' + esc(meta) + "</small>" +
+      '<div class="car-eq' + (radioState.playing ? " on" : "") + '" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div></div>';
+    const dial = '<div class="car-dial" aria-hidden="true"><span class="car-needle" style="left:' + pos + '%"></span></div>';
+    const controls = '<div class="car-controls">' +
+      '<button type="button" class="car-btn" data-act="radio-prev" aria-label="' + esc(t("radio_prev")) + '">◀</button>' +
+      '<button type="button" class="car-play" data-act="radio-toggle" aria-label="' + esc(radioState.playing ? t("radio_pause") : t("radio_play")) + '">' + (radioState.playing ? "❚❚" : "▶") + "</button>" +
+      '<button type="button" class="car-btn" data-act="radio-next" aria-label="' + esc(t("radio_next")) + '">▶</button>' +
+      '<button type="button" class="car-btn car-stop" data-act="radio-stop" aria-label="' + esc(t("radio_stop")) + '">■</button></div>';
+    let body = "";
+    if (radioState.loading) body = '<p class="fine">' + esc(t("radio_loading")) + "</p>";
+    else if (list && !list.length) body = '<p class="fine">' + esc(t("radio_empty")) + "</p>";
+    else if (list) body = '<ul class="radio-list">' + list.map((s, i) => s.pending ? '<li><button type="button" class="radio-item pending" disabled><b>' + esc(s.name) + "</b><small>" + esc(t("radio_pending")) + "</small></button></li>" : '<li><button type="button" class="radio-item' + (i === radioState.idx ? " on" : "") + '" data-act="radio-play" data-i="' + i + '"><b>' + esc(s.name) + "</b><small>" +
+      esc([s.state, s.codec, s.bitrate ? s.bitrate + " kbps" : ""].filter(Boolean).join(" · ")) + "</small></button></li>").join("") + "</ul>";
+    return '<section class="card stack radio-car" id="radioCard"><p class="label">' + icon("spark") + esc(t("radio_title")) + "</p><p class=\"fine\">" + esc(t("radio_hint")) + "</p>" +
+      '<div class="chips radio-regions">' + regionBtns + genreBtns + "</div>" + screen + dial + controls + (radioState.error ? '<p class="fine bad-text">' + esc(radioState.error) + "</p>" : "") + body + "</section>";
+  }
   function vMyJobs() {
     const jobs = S.data.jobs;
     if (S.data.loading && !jobs) return loading();
-    if (!jobs || !jobs.length) return empty("check", t("no_jobs"));
-    return '<h1 class="title">' + esc(t("tab_myjobs")) + "</h1>" + brainCard("worker") + jobs.map((b) => '<article class="card order">' +
+    if (!jobs || !jobs.length) return '<h1 class="title">' + esc(t("tab_myjobs")) + "</h1>" + dateStrip() + radioCard() + empty("check", t("no_jobs"));
+    return '<h1 class="title">' + esc(t("tab_myjobs")) + "</h1>" + dateStrip() + radioCard() + brainCard("worker") + jobs.map((b) => '<article class="card order">' +
       '<div class="row between"><b class="code">' + esc(b.code) + '</b><span class="pill st-' + b.status + '">' + esc(t("st_" + b.status)) + "</span></div>" +
       "<h3>" + esc(svcName(b.service)) + "</h3>" +
       '<p class="meta">' + icon("clock") + esc(b.urgency === "asap" ? t("asap") : when(b.scheduled_at)) + " · " + money(b.budget) + (b.hours_est ? " · " + b.hours_est + " h" : "") + "</p>" +
@@ -737,7 +839,9 @@
         '<a class="btn wa small" target="_blank" rel="noopener" href="' + wa(b.customer.phone, t("wa_msg_customer", { name: S.me.profile.full_name, code: b.code })) + '">' + icon("chat") + "WhatsApp</a>" +
         '<a class="btn ghost small" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent([b.address, b.city, b.zip, "FL"].filter(Boolean).join(", ")) + '">' + icon("pin") + esc(t("directions")) + "</a></div>" +
         (b.status === "assigned" ? '<button class="btn solid block" data-act="start" data-id="' + b.id + '">' + esc(t("start_job")) + "</button>" :
-          '<button class="btn solid block" data-act="complete" data-id="' + b.id + '">' + icon("check") + esc(t("finish_job")) + "</button>") :
+          '<div class="job-actions">' + (b.paused_at ? '<button class="btn ghost" data-act="resume" data-id="' + b.id + '">' + icon("clock") + esc(t("timer_resume")) + "</button>" :
+            '<button class="btn ghost" data-act="pause" data-id="' + b.id + '">' + esc(t("timer_pause")) + "</button>") +
+          '<button class="btn solid" data-act="complete" data-id="' + b.id + '">' + icon("check") + esc(t("finish_job")) + "</button></div>") :
         b.review ? '<p class="stars">' + stars(b.review.rating) + (b.review.comment ? " · " + esc(b.review.comment) : "") + "</p>" : "") + "</article>").join("");
   }
   function vEarnings() {
@@ -979,6 +1083,15 @@
     }
     else if (a === "decline") { await run(() => API.declineOffer(id)).catch(() => {}); loadTab(true); }
     else if (a === "start") { await run(() => API.startJob(id)).catch(() => {}); loadTab(true); }
+    else if (a === "radio-region") { loadRadio(el.dataset.r); }
+    else if (a === "radio-play") { playRadio(Number(el.dataset.i)); }
+    else if (a === "radio-genre") { radioState.genre = el.dataset.g; radioEl().pause(); radioState.idx = -1; radioState.playing = false; delete radioState.list[radioState.region]; loadRadio(radioState.region); }
+    else if (a === "radio-prev") { stepRadio(-1); }
+    else if (a === "radio-next") { stepRadio(1); }
+    else if (a === "radio-toggle") { if (radioState.idx < 0) { stepRadio(1); } else { const au = radioEl(); if (au.paused) au.play().catch(() => { radioState.error = t("radio_fail_play"); refreshRadio(); }); else au.pause(); } }
+    else if (a === "radio-stop") { const au = radioEl(); au.pause(); au.removeAttribute("src"); au.load(); radioState.idx = -1; radioState.playing = false; refreshRadio(); }
+    else if (a === "pause") { await run(() => API.pauseJob(id)).catch(() => {}); loadTab(true); }
+    else if (a === "resume") { await run(() => API.resumeJob(id)).catch(() => {}); loadTab(true); }
     else if (a === "complete") { stopSharing(); await run(() => API.completeJob(id)).catch(() => {}); loadTab(true); }
     else if (a === "wfilter") { S.filter = el.dataset.f; render(); }
     else if (a === "range") { S.range = Number(el.dataset.d); S.data.an = null; render(); loadTab(true); }

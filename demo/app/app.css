@@ -517,3 +517,61 @@ select{appearance:none;background-image:linear-gradient(45deg,transparent 50%,va
   .card,.tile,.btn,.chip span,.seg-opt span,.tabbar button .ic{transition:none}
   .card:hover,.tile:hover,.tabbar button.on .ic{transform:none}
 }
+
+/* Live clock and date (ride-app header) and the job timer with pause */
+.date-strip{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap;margin:6px 0 14px;padding:14px 16px;border-radius:20px;
+  background:linear-gradient(160deg,rgba(18,40,26,.9),rgba(6,14,9,.95));border:1px solid rgba(162,234,79,.25);box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 18px 30px -22px rgba(162,234,79,.45)}
+.date-strip p{margin:0;display:flex;flex-direction:column;gap:2px}
+.date-strip small{color:var(--muted);font-size:12px}
+.clock-now{font:800 30px/1 var(--display);letter-spacing:.01em;font-variant-numeric:tabular-nums;color:var(--lime-hot);text-shadow:0 0 18px rgba(162,234,79,.45)}
+.day-line{text-align:right;align-items:flex-end}
+.day-line span{font:700 15px var(--display);color:var(--text)}
+.job-timer{display:flex;align-items:center;gap:8px;margin:0;padding:10px 12px;border-radius:14px;background:rgba(162,234,79,.1);box-shadow:inset 0 0 0 1px rgba(162,234,79,.3)}
+.job-timer .tval{font:800 22px/1 var(--display);font-variant-numeric:tabular-nums;color:var(--lime-hot);margin-left:4px}
+.job-timer.paused{background:rgba(255,207,90,.1);box-shadow:inset 0 0 0 1px rgba(255,207,90,.4)}
+.job-timer.paused .tval{color:var(--warn)}
+.paused-tag{margin-left:8px;color:var(--warn);font:700 12px var(--display);text-transform:uppercase;letter-spacing:.08em}
+.job-actions{display:grid;grid-template-columns:1fr 1.4fr;gap:10px}
+.job-actions .btn{min-height:56px;width:100%}
+
+/* Radio while working */
+.radio-regions{margin-bottom:2px}
+.radio-now{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 12px;border-radius:14px;background:rgba(162,234,79,.1);box-shadow:inset 0 0 0 1px rgba(162,234,79,.3)}
+.radio-now b{flex:1;min-width:120px;overflow:hidden;text-overflow:ellipsis}
+.radio-dot{width:10px;height:10px;border-radius:50%;background:var(--faint);flex:none}
+.radio-dot.live{background:var(--lime);box-shadow:0 0 12px var(--lime);animation:pulse 1.4s ease-in-out infinite}
+.radio-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.radio-item{width:100%;text-align:left;display:flex;flex-direction:column;gap:2px;padding:12px 14px;border-radius:14px;border:1px solid var(--line-2);background:var(--card);color:var(--text);cursor:pointer;font:inherit;min-height:52px}
+.radio-item b{font:700 15px var(--display)}
+.radio-item small{color:var(--muted);font-size:12px}
+.radio-item.on{border-color:var(--lime);box-shadow:0 0 16px -6px rgba(162,234,79,.6)}
+.bad-text{color:var(--bad)}
+
+/* Car-radio card for the radio (own design: neon screen, equalizer, dial, round buttons) */
+.radio-car{background:radial-gradient(120% 90% at 50% -20%,rgba(255,79,216,.2),transparent 60%),linear-gradient(170deg,#140a1f,#070511 70%);border-color:rgba(255,79,216,.35);box-shadow:0 26px 50px -30px rgba(255,79,216,.55),inset 0 1px 0 rgba(255,255,255,.08)}
+.car-screen{position:relative;overflow:hidden;display:flex;flex-direction:column;gap:4px;padding:16px 16px 14px;border-radius:18px;background:linear-gradient(180deg,#120a22,#07040f);box-shadow:inset 0 0 0 1px rgba(63,243,255,.35),inset 0 0 26px rgba(63,243,255,.12),0 0 24px -8px rgba(255,79,216,.6)}
+.car-screen::after{content:"";position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(180deg,rgba(255,255,255,.04) 0 1px,transparent 1px 3px)}
+.car-tag{align-self:flex-start;font:800 11px/1 var(--display);letter-spacing:.2em;color:#3ff3ff;text-shadow:0 0 8px rgba(63,243,255,.8)}
+.car-tag.live{color:#ff4fd8;text-shadow:0 0 10px rgba(255,79,216,.9);animation:carblink 1.2s steps(2,start) infinite}
+@keyframes carblink{to{visibility:hidden}}
+.car-name{font:800 26px/1.1 var(--display);color:#fff;text-shadow:0 0 14px rgba(255,79,216,.7);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.car-meta{color:#9fe9f5;font-size:13px;min-height:1em}
+.car-eq{display:flex;align-items:flex-end;gap:4px;height:28px;margin-top:6px}
+.car-eq i{width:6px;height:6px;border-radius:2px;background:linear-gradient(180deg,#ff4fd8,#3ff3ff)}
+.car-eq.on i{animation:careq .9s ease-in-out infinite}
+.car-eq.on i:nth-child(2){animation-delay:.15s}
+.car-eq.on i:nth-child(3){animation-delay:.3s}
+.car-eq.on i:nth-child(4){animation-delay:.45s}
+.car-eq.on i:nth-child(5){animation-delay:.6s}
+.car-eq.on i:nth-child(6){animation-delay:.75s}
+@keyframes careq{0%,100%{height:6px}50%{height:28px}}
+.car-dial{position:relative;height:18px;margin:10px 4px 6px;border-radius:9px;background:repeating-linear-gradient(90deg,rgba(255,255,255,.35) 0 1px,transparent 1px 12px),linear-gradient(90deg,#2a1640,#0b0716);box-shadow:inset 0 0 0 1px rgba(63,243,255,.25)}
+.car-needle{position:absolute;top:-4px;bottom:-4px;width:3px;margin-left:-1.5px;border-radius:2px;background:#ff4fd8;box-shadow:0 0 10px #ff4fd8;transition:left .4s cubic-bezier(.2,.8,.2,1)}
+.car-controls{display:flex;align-items:center;justify-content:center;gap:14px}
+.car-btn,.car-play{display:grid;place-items:center;border:0;cursor:pointer;color:#fff;font:800 18px/1 var(--display);padding:0;transition:transform .12s ease,box-shadow .12s ease}
+.car-btn{width:52px;height:52px;border-radius:50%;background:linear-gradient(180deg,#2a1b40,#120a1e);box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 6px 0 #05030a,0 0 0 1px rgba(63,243,255,.3)}
+.car-btn:active{transform:translateY(3px);box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 3px 0 #05030a,0 0 0 1px rgba(63,243,255,.3)}
+.car-play{width:72px;height:72px;border-radius:50%;background:linear-gradient(180deg,#ff6fe4,#ff2fc4);box-shadow:0 7px 0 #7a0f63,0 0 26px rgba(255,79,216,.6)}
+.car-play:active{transform:translateY(4px);box-shadow:0 3px 0 #7a0f63,0 0 26px rgba(255,79,216,.6)}
+.car-stop{font-size:14px}
+@media (prefers-reduced-motion:reduce){.car-eq i,.car-tag.live{animation:none}.car-needle{transition:none}}
