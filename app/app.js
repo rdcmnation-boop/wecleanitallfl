@@ -146,7 +146,7 @@
     worker: [],
     admin: [["panel", "grid", "tab_panel"], ["bookings", "list", "tab_bookings"], ["workers", "users", "tab_workers"], ["system", "spark", "tab_more"]]
   };
-  const APP_VERSION = "2026.11.2e";
+  const APP_VERSION = "2026.11.2f";
   let DASH = null;
   const DD = () => DASH || (DASH = window.WCIA_DASH({ t, esc, icon, money, when, svcName, S, CFG, wa, tel, stars, empty, loading, jobTimer, statusBanner, reviewsPanel, role, brainCard, store, tile, lang: () => lang, version: APP_VERSION }));
   // Screens a role can open (tab bar + side menu + sub-screens), so a saved screen is restored after a reload.
@@ -423,6 +423,12 @@
     const m = Math.floor((Date.now() - Date.parse(el.dataset.since)) / 60000);
     const v = m < 1 ? t("loc_now") : t("loc_ago", { n: m }); if (el.textContent !== v) el.textContent = v;
   });
+  // One section open at a time: tapping a closed section closes the others (tidy, like an accordion). "Open all" still opens every one.
+  document.addEventListener("click", (e) => {
+    const sm = e.target.closest && e.target.closest("details.sec[data-sec] > summary"); if (!sm) return;
+    const d = sm.parentElement; if (d.open) return;
+    document.querySelectorAll("details.sec[data-sec][open]").forEach((o) => { if (o !== d && !o.contains(d)) { o.open = false; S.secs = S.secs || {}; S.secs[o.dataset.sec] = false; } });
+  }, true);
   document.addEventListener("toggle", (e) => { const d = e.target; if (d && d.matches && d.matches("details.sec[data-sec]")) { S.secs = S.secs || {}; S.secs[d.dataset.sec] = d.open; } }, true);
   setInterval(() => { tickTimers(); tickLoc(); }, 1000);
   setInterval(() => { if (S.tab === "orders" && document.querySelector(".live-loc") && !S.data.loading) loadTab(true); }, 30000);
@@ -475,12 +481,14 @@
     if (f.segment === "commercial") h = Math.max(2, Math.round(((Number(f.sqft) || 2000) / 1000) * 1.5 * 2) / 2);
     else h = 1.5 + (Number(f.bedrooms) || 0) * 0.75 + (Number(f.bathrooms) || 0) * 0.5;
     if (deep) h *= 1.5;
-    h = Math.round(h * 2) / 2;
-    return { hours: h, budget: Math.round(h * (Number(CFG.SUGGESTED_HOURLY) || 30) / 5) * 5 };
+    h = Math.max(2, Math.round(h * 2) / 2);
+    const heavy = deep || ["windows", "carpet"].includes(f.service);
+    const rate = heavy ? Number(CFG.DEEP_HOURLY) || 55 : Number(CFG.SUGGESTED_HOURLY) || 45;
+    return { hours: h, rate, budget: Math.max(Number(CFG.MIN_JOB) || 120, Math.round((h * rate) / 5) * 5) };
   }
   // Collapsible sections for the booking form (native <details>). Open/closed state survives re-renders.
   // Sections are open by default unless the owner/customer closed them; "open = false" starts them closed.
-  const secO = (k, label, open = true) => {
+  const secO = (k, label, open = false) => {
     const isOpen = S.secs && k in S.secs ? S.secs[k] : open;
     return '<details class="sec" data-sec="' + k + '"' + (isOpen ? " open" : "") + '><summary>' + esc(label) + "</summary>";
   };
@@ -595,14 +603,14 @@
       field("g_phone", t("phone"), "tel", 'required inputmode="tel" maxlength="20" autocomplete="tel"', null, S.me.profile.phone) : "";
     return '<section class="now-card"><div class="now-orb" aria-hidden="true"><i></i><i></i><i></i></div>' +
       '<p class="now-kicker"><b></b>' + esc(t("now_live")) + "</p>" +
-      '<h2 class="now-title">' + esc(t("now_title")) + "</h2>" +
+      secO("now", t("now_title")).replace('class="sec"', 'class="sec now-sec"') +
       '<p class="now-hint">' + esc(t("now_hint")) + "</p>" +
       '<form class="now-form stack" data-form="now" novalidate>' + guest +
       chips("now_service", SERVICES.residential.map((s) => [s, svcName(s)]), [n.service]) +
       '<div class="row2">' + field("zip", t("zip"), "text", 'required inputmode="numeric" pattern="[0-9]{5}" maxlength="5" autocomplete="postal-code"', null, n.zip || "") +
       field("address", t("address"), "text", 'maxlength="200" autocomplete="street-address"', t("address_private"), n.address || "") + "</div>" +
       '<button class="btn solid block xl now-go" type="submit">' + icon("spark") + esc(t("now_btn")) + "</button>" +
-      '<p class="fine center">' + esc(t("now_fine")) + "</p></form></section>";
+      '<p class="fine center">' + esc(t("now_fine")) + "</p></form>" + secC + "</section>";
   }
   function vBook() {
     const f = S.form.book || (S.form.book = { segment: "residential", service: "standard", bedrooms: 2, bathrooms: 1, frequency: "once", urgency: "scheduled" });
@@ -610,15 +618,17 @@
     const pref = f.preferred_worker_id ? (S.data.cleaners || []).find((c) => c.id === f.preferred_worker_id) || S.form.prefCleaner : null;
     const minDate = new Date(Date.now() + 2 * 3600e3); minDate.setMinutes(0, 0, 0);
     const localMin = new Date(minDate.getTime() - minDate.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
-    const guestCard = S.me.isGuest ? '<div class="card stack"><p class="label">' + icon("user") + esc(t("guest_contact")) + "</p>" +
+    const guestCard = S.me.isGuest ? secO("contact", t("guest_contact")) + '<div class="card stack">' +
       field("g_name", t("full_name"), "text", 'required maxlength="120" autocomplete="name"', null, S.me.profile.full_name) +
-      field("g_phone", t("phone"), "tel", 'required inputmode="tel" maxlength="20" autocomplete="tel"', null, S.me.profile.phone) + "</div>" : "";
+      field("g_phone", t("phone"), "tel", 'required inputmode="tel" maxlength="20" autocomplete="tel"', null, S.me.profile.phone) + "</div>" + secC : "";
+    const allOpen = ["now", "contact", "what", "where", "when", "details", "access"].some((k) => S.secs && S.secs[k]);
+    const secAll = '<div class="sec-all"><button type="button" class="btn ghost small" data-act="secall" data-open="' + (allOpen ? "0" : "1") + '">' + esc(t(allOpen ? "close_all" : "open_all")) + "</button></div>";
     const sugg = (S.data.cleaners || []).filter((c) => !f.preferred_worker_id && (!f.service || (c.services || []).includes(f.service))).slice(0, 3);
     const suggHtml = sugg.length ? '<div class="card"><p class="label">' + icon("users") + esc(t("suggested")) + '</p><div class="sugg">' + sugg.map((c) =>
       '<div class="sugg-c"><span class="av">' + esc((c.display_name || "?")[0]) + '</span><span><b>' + esc(c.display_name) + "</b><small>★ " + esc(String(c.rating_avg || "–")) + " · " + esc(String(c.jobs_done || 0)) + " " + esc(t("jobs_done_short")) + "</small></span>" +
       '<button type="button" class="btn ghost small" data-act="prefer" data-id="' + esc(c.id) + '">' + esc(t("pick")) + "</button></div>").join("") + "</div></div>" : "";
     return '<h1 class="title">' + esc(t("book_title")) + "</h1>" + dateStrip() + nowCard() +
-      '<form class="form stack" data-form="book" novalidate>' + guestCard + secO("what", t("sec_what")) +
+      '<form class="form stack" data-form="book" novalidate>' + secAll + guestCard + secO("what", t("sec_what")) +
       '<div class="seg big">' + [["residential", "home"], ["commercial", "building"]].map(([v, ic]) =>
         '<label class="seg-opt"><input type="radio" name="segment" value="' + v + '"' + (f.segment === v ? " checked" : "") + ">" + "<span>" + icon(ic) + esc(t(v)) + "</span></label>").join("") + "</div>" +
       chips("service", SERVICES[f.segment].map((s) => [s, svcName(s)]), [f.service]) +
@@ -634,8 +644,8 @@
       secC + secO("when", t("sec_when")) + '<div class="card"><p class="label">' + esc(t("when")) + "</p>" + seg("urgency", [["scheduled", t("pick_date")], ["asap", t("asap")]], f.urgency) +
       (f.urgency === "scheduled" ? whenPicker(f) : "") + "</div>" +
       secC + secO("details", t("sec_details") + " · $" + (f.budget || sg.budget), false) + '<div class="card"><div class="row2">' + field("hours_est", t("hours_est"), "number", 'step="0.5" min="0.5" max="200" inputmode="decimal"', null, f.hours_est || sg.hours) +
-      field("budget", t("budget") + " ($)", "number", 'min="0" max="100000" inputmode="numeric"', null, f.budget || sg.budget) + "</div>" +
-      '<p class="fine">' + esc(t("budget_hint")) + "</p></div>" +
+      field("budget", t("price_label") + " ($)", "number", 'min="' + sg.budget + '" max="100000" inputmode="numeric"', null, Math.max(Number(f.budget) || 0, sg.budget)) + "</div>" +
+      '<p class="fine">' + esc(t("price_hint", { p: "$" + sg.budget, h: "$" + Math.round(Math.max(Number(f.budget) || 0, sg.budget) / sg.hours) })) + "</p></div>" +
       secC + secO("access", t("sec_access"), !!f.notes) +
       '<label class="field"><span>' + esc(t("notes")) + '</span><textarea name="notes" rows="3" maxlength="1000">' + esc(f.notes || "") + "</textarea></label>" +
       secC +
@@ -1244,6 +1254,7 @@
       if (a === "agmsg") msg = !st.messaging_on;
       await run(() => API.adminSaveAgentSettings(cap, auto, null, msg), t("saved")).catch(() => {}); loadTab(true);
     }
+    else if (a === "secall") { const o = el.dataset.open === "1"; S.secs = S.secs || {}; ["now", "contact", "what", "where", "when", "details", "access", "sugg"].forEach((k) => { S.secs[k] = o; }); render(); }
     else if (a === "agowner") {
       const v = window.prompt(lang === "es" ? "Tu número personal de WhatsApp (con código de área). Desde ese número recibes el modo dueño." : "Your personal WhatsApp number (with area code). Messages from it get owner mode.", "");
       if (v == null || !String(v).replace(/\D/g, "")) return;
@@ -1389,7 +1400,7 @@
     const form = e.target, kind = form.dataset.form, d = formData(form);
     if (kind === "brain") { await brainAsk(form); return; }
     const invalid = [...form.querySelectorAll("input[required]")].find((i) => !i.checkValidity());
-    if (invalid && kind !== "dir") { invalid.focus(); invalid.reportValidity && invalid.reportValidity(); return; }
+    if (invalid && kind !== "dir") { const sec = invalid.closest("details"); if (sec && !sec.open) sec.open = true; invalid.focus(); invalid.reportValidity && invalid.reportValidity(); return; }
     try {
       if (kind === "signup") {
         const r = await run(() => API.signUp({ email: d.email.trim(), password: d.password, role: S.authRole, full_name: d.full_name.trim(), phone: d.phone.trim(), language: lang, kind: d.kind || "individual", company_name: (d.company_name || "").trim() }));
@@ -1414,6 +1425,8 @@
         const f = now ? nowDraft(d) : S.form.book;
         if (!/^\d{5}$/.test(f.zip || "")) { toast(t("zip_invalid"), "bad"); form.zip.focus(); return; }
         if (f.urgency === "scheduled" && !f.scheduled_at) { toast(t("date_needed"), "bad"); form.scheduled_at && form.scheduled_at.focus(); return; }
+        const fair = suggest(f).budget;
+        if (!now && f.budget !== "" && Number(f.budget) < fair) { f.budget = fair; toast(t("price_low", { p: "$" + fair }), "bad"); render(); return; }
         let guestInfo = null;
         if (S.me.isGuest) {
           const gn = String(d.g_name || "").trim(), gp = String(d.g_phone || "").trim();

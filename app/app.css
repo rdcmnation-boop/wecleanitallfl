@@ -799,3 +799,6 @@ body.cleaner .dash{position:relative;min-height:100vh;min-height:100dvh}
 
 /* long links (webhook URL) wrap on phones */
 .card code{word-break:break-all;font-size:.82em;background:rgba(255,255,255,.06);padding:1px 5px;border-radius:6px}
+.sec-all{display:flex;justify-content:flex-end;margin:-4px 0 2px}
+.now-sec>summary{font-size:1.5rem;font-weight:800;border:0;background:none;padding:6px 0}
+.now-sec{border:0;background:none}

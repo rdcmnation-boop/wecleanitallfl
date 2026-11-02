@@ -17,8 +17,12 @@ window.WCIA_CONFIG = {
   // Brain assistants (customer, cleaner, owner). Keep false until the 'brain' function is deployed in Supabase
   // and ANTHROPIC_API_KEY is set. Demo mode always shows them.
   BRAIN_ON: true,
-  // Suggested hourly rate used only to pre-fill an estimate the customer can change.
-  SUGGESTED_HOURLY: 30,
+  // Fair price for cleaners (Miami market, Nov 2026: visits average about $158-$278).
+  // Standard cleaning per hour, heavier work (deep, move, post-construction, windows, carpet) per hour,
+  // and the smallest job (covers travel and supplies). Clients can add more, never less.
+  SUGGESTED_HOURLY: 45,
+  DEEP_HOURLY: 55,
+  MIN_JOB: 120,
   // Owner contact shown to customers and cleaners.
   BUSINESS_PHONE: "9543209303",
   BUSINESS_EMAIL: "wecleanitallfl@gmail.com",

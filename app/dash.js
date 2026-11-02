@@ -9,6 +9,8 @@
   Object.assign(I.es, {
     m_home: "Inicio", m_schedule: "Agenda", m_ratings: "Calificaciones", m_career: "Capacitación y carrera", m_tips: "Consejos",
     m_help: "Ayuda", m_menu: "Menú", tab_home: "Inicio", tab_more: "Más",
+    price_label: "Precio", price_hint: "Precio justo para este tamaño: {p} · tu limpiador gana unos {h} por hora. Puedes agregar más, no menos.",
+    price_low: "El precio no puede ser menos de {p}: es lo que el limpiador necesita para este trabajo.", open_all: "Abrir todo", close_all: "Cerrar todo", price_too_low: "El precio está por debajo de lo justo para el limpiador. Súbelo e intenta de nuevo.",
     brain_off_owner: "La IA se activa al agregar la clave de Claude (máximo $10 al mes). Mientras tanto, usa el resumen del panel.",
     sign_out: "Cerrar sesión", log_out: "Cerrar sesión", sign_out_q: "¿Cerrar sesión?",
     sign_out_all: "Cerrar sesión en todos mis dispositivos",
@@ -61,6 +63,8 @@
   Object.assign(I.en, {
     m_home: "Home", m_schedule: "Schedule", m_ratings: "Ratings", m_career: "Training & career", m_tips: "Tips",
     m_help: "Help", m_menu: "Menu", tab_home: "Home", tab_more: "More",
+    price_label: "Price", price_hint: "Fair price for this size: {p} · your cleaner earns about {h} an hour. You can add more, not less.",
+    price_low: "The price can't be below {p}: that's what your cleaner needs for this job.", open_all: "Open all", close_all: "Close all", price_too_low: "The price is below fair pay for the cleaner. Raise it and try again.",
     brain_off_owner: "AI turns on when the Claude key is added ($10/month max). For now, use the panel summary.",
     sign_out: "Log out", log_out: "Log out", sign_out_q: "Log out?",
     sign_out_all: "Log out on all my devices",
