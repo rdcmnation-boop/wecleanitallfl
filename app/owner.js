@@ -62,9 +62,11 @@
         tile(L() ? "Clientes que repiten" : "Repeat customers", a.repeat_customers) + tile(L() ? "Registros" : "Sign-ups", a.series.reduce((s, d) => s + d.signups, 0)) + "</div>" +
         '<section class="card"><p class="label">' + esc(L() ? "Pedidos por día" : "Orders per day") + "</p>" + bars(a.series, "created", (v) => String(Math.round(v)), { label: "orders" }) + "</section>" +
         '<section class="card"><p class="label">' + esc(L() ? "Ventas completadas por día" : "Completed sales per day") + "</p>" + bars(a.series, "gmv", (v, ax) => ax ? "$" + (v >= 1000 ? Math.round(v / 100) / 10 + "k" : Math.round(v)) : money(v), { label: "sales" }) + "</section>" +
-        '<section class="card"><p class="label">' + esc(L() ? "Embudo" : "Funnel") + "</p>" + hbars([
+        // Order progress: how many orders reach each step, with the share of all orders.
+        '<section class="card"><p class="label">' + esc(t("order_progress")) + "</p>" + hbars([
           { label: L() ? "Pedidos" : "Orders", v: f.created || 0 }, { label: L() ? "Con ofertas" : "Offered", v: f.offered || 0 },
-          { label: L() ? "Asignados" : "Assigned", v: f.assigned || 0 }, { label: L() ? "Completados" : "Completed", v: f.completed || 0 }]) + "</section>" +
+          { label: L() ? "Asignados" : "Assigned", v: f.assigned || 0 }, { label: L() ? "Completados" : "Completed", v: f.completed || 0 }]
+          .map((r, i) => Object.assign(r, { show: i && f.created ? r.v + " · " + Math.round((100 * r.v) / f.created) + "%" : r.v }))) + "</section>" +
         '<section class="card"><p class="label">' + esc(L() ? "Demanda por ZIP vs. limpiadores" : "Demand by ZIP vs. cleaners") + "</p>" +
         (a.zips.length ? '<table class="tbl"><thead><tr><th>ZIP</th><th>' + esc(L() ? "Pedidos" : "Orders") + "</th><th>" + esc(L() ? "Sin limpiador" : "Unmatched") + "</th><th>" + esc(L() ? "Limpiadores" : "Cleaners") + "</th></tr></thead><tbody>" +
           a.zips.map((z) => "<tr" + (z.cleaners === 0 ? ' class="gap"' : "") + "><td><b>" + esc(z.zip) + "</b></td><td>" + z.demand + "</td><td>" + z.unmatched + "</td><td>" + z.cleaners + (z.cleaners === 0 ? " ⚠" : "") + "</td></tr>").join("") + "</tbody></table>" : '<p class="muted">—</p>') + "</section>" +
@@ -230,17 +232,18 @@
         ["Owner panel: orders, cleaners, analytics, improvements", "Panel de dueño: pedidos, limpiadores, analítica, mejoras"],
         ["10 agents with approvals and a read-only audit log", "10 agentes con aprobaciones y registro de auditoría de solo lectura"],
         ["Agent console (read-only reports)", "Consola de agentes (reportes de solo lectura)"],
-        ["Spanish / English, installable on the phone", "Español / inglés, se instala en el teléfono"]
+        ["Spanish / English, installable on the phone", "Español / inglés, se instala en el teléfono"],
+        ["Agent database rules tested: 48 of 48 pass", "Reglas de agentes probadas: 48 de 48 pasan"],
+        ["Remember this device (owner) is live", "Recordar dispositivo (dueño) activo"],
+        ["4 agent decisions made: routine + support replies send alone, Claude Haiku 5.5 capped at $10/month, agents go live in 3 steps, logs kept 1 year", "4 decisiones tomadas: avisos de rutina y respuestas de soporte salen solos, Claude Haiku 5.5 con tope de $10 al mes, agentes en 3 etapas, registros por 1 año"],
+        ["DoorDash-style app: ☰ menu with Log out for everyone, cleaner Home with Go active, live order tracker with alerts", "App estilo DoorDash: menú ☰ con Cerrar sesión para todos, Inicio del limpiador con Ponerme activo, seguimiento del pedido en vivo con avisos"]
       ];
       const todo = [
-        ["Test the agent database rules", "Probar las reglas de la base de datos de agentes", "Paste agents_phase1_test.sql and send me the DRYRUN_RESULT line.", "Pega agents_phase1_test.sql y mándame la línea DRYRUN_RESULT.", [["SQL Editor", "SQL Editor", P + "/sql/new"]]],
-        ["Block leaked passwords", "Bloquear contraseñas filtradas", "Turn on leaked-password protection (Email provider).", "Activa la protección de contraseñas filtradas (proveedor Email).", [["Auth settings", "Ajustes de Auth", P + "/auth/providers"]]],
-        ["Remember this device (owner)", "Recordar dispositivo (dueño)", "Built and tested. Needs its SQL applied in Supabase.", "Listo y probado. Falta aplicar su SQL en Supabase.", [["SQL Editor", "SQL Editor", P + "/sql/new"]]],
-        ["AI CEO with Claude", "AI CEO con Claude", "Create a key, then save it as ANTHROPIC_API_KEY.", "Crea una clave y guárdala como ANTHROPIC_API_KEY.", [["Get key", "Crear clave", "https://console.anthropic.com/settings/keys"], ["Save secret", "Guardar secreto", P + "/functions/secrets"]]],
-        ["Phone codes for guest bookings", "Códigos por teléfono para pedidos sin cuenta", "Email codes are on (see the card above). For WhatsApp/SMS, set up Phone with Twilio and switch GUEST_VERIFY to phone.", "Los códigos por correo ya están activos (ve la tarjeta de arriba). Para WhatsApp/SMS, configura Phone con Twilio y cambia GUEST_VERIFY a phone.", [["Supabase Auth", "Auth de Supabase", P + "/auth/providers"], ["Twilio", "Twilio", "https://console.twilio.com/"]]],
-        ["WhatsApp agent that answers (Twilio for now)", "Agente de WhatsApp que responde (Twilio por ahora)", "You as owner, everyone else as users. Needs Twilio Account SID, Auth Token and a WhatsApp number. Not built yet.", "Tú como dueño, los demás como usuarios. Necesita Account SID, Auth Token y un número de WhatsApp de Twilio. Aún no está construido.", [["Twilio WhatsApp", "Twilio WhatsApp", "https://console.twilio.com/us1/develop/sms/try-it-out/whatsapp-learn"]]],
-        ["Card payments (optional)", "Pagos con tarjeta (opcional)", "Not built yet.", "Aún no está construido.", [["Stripe keys", "Claves de Stripe", "https://dashboard.stripe.com/apikeys"]]],
-        ["4 agent decisions", "4 decisiones de agentes", "Messages without approval, AI provider and spend cap, first live agents, audit retention.", "Mensajes sin aprobación, proveedor de IA y tope de gasto, primeros agentes en vivo, retención de auditoría.", []]
+        ["Block leaked passwords", "Bloquear contraseñas filtradas", "Supabase offers this only on its Pro plan. Free alternative: in Email settings require digits, lowercase, uppercase and symbols (8+ characters).", "Supabase lo ofrece solo en el plan Pro. Alternativa gratis: en los ajustes de Email exige números, minúsculas, mayúsculas y símbolos (8+ caracteres).", [["Auth settings", "Ajustes de Auth", P + "/auth/providers"]]],
+        ["AI with Claude (optional)", "IA con Claude (opcional)", "Free until you add a key: the app uses its built-in replies. With a key, AI stops at the $10 monthly cap.", "Gratis hasta que agregues una clave: la app usa sus respuestas propias. Con clave, la IA se detiene en el tope de $10 al mes.", [["Get key", "Crear clave", "https://console.anthropic.com/settings/keys"], ["Save secret", "Guardar secreto", P + "/functions/secrets"]]],
+        ["WhatsApp codes and WhatsApp agent (Twilio)", "Códigos y agente de WhatsApp (Twilio)", "Email codes stay on and free. WhatsApp needs a Twilio Account SID, Auth Token and a WhatsApp number.", "Los códigos por correo siguen activos y gratis. WhatsApp necesita Account SID, Auth Token y un número de WhatsApp de Twilio.", [["Twilio WhatsApp", "Twilio WhatsApp", "https://console.twilio.com/us1/develop/sms/try-it-out/whatsapp-learn"]]],
+        ["Google map on the cleaner's Home (optional)", "Mapa de Google en el Inicio del limpiador (opcional)", "Zones show without it. A free Google Maps key adds the real map.", "Las zonas se ven sin él. Una clave gratis de Google Maps agrega el mapa real.", [["Google Maps key", "Clave de Google Maps", "https://console.cloud.google.com/google/maps-apis/credentials"]]],
+        ["Card payments (optional)", "Pagos con tarjeta (opcional)", "Not built yet.", "Aún no está construido.", [["Stripe keys", "Claves de Stripe", "https://dashboard.stripe.com/apikeys"]]]
       ];
       const ok = '<span class="ck ok">' + icon("check") + "</span>", no = '<span class="ck no"></span>';
       // Guest verification: which channel is live, and how to switch to WhatsApp/SMS.

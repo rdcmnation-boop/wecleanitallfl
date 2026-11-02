@@ -60,7 +60,16 @@
     out: '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/>',
     globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/>',
     chart: '<path d="M3 3v18h18"/><path d="M7 15v2M11 11v6M15 7v10M19 12v5"/>',
-    file: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/>'
+    file: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/>',
+    menu: '<path d="M4 7h16M4 12h16M4 17h16"/>',
+    star: '<path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2L12 17.3l-5.6 2.9 1.1-6.2L3 9.6l6.2-.9z"/>',
+    calendar: '<rect x="3" y="5" width="18" height="16" rx="2.5"/><path d="M3 10h18M8 3v4M16 3v4"/>',
+    nav: '<path d="M3 11 21 3l-8 18-2-8z"/>',
+    help: '<circle cx="12" cy="12" r="9"/><path d="M9.2 9.2a3 3 0 0 1 5.8 1c0 2-3 2.4-3 4.3M12 17.5h.01"/>',
+    back: '<path d="M19 12H5M11 18l-6-6 6-6"/>',
+    chev: '<path d="m9 6 6 6-6 6"/>',
+    x: '<path d="M18 6 6 18M6 6l12 12"/>',
+    pen: '<path d="M4 20h4L19.5 8.5a2.1 2.1 0 0 0-3-3L5 17v3z"/>'
   };
   const icon = (n, cls) => '<svg class="ic ' + (cls || "") + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + I[n] + "</svg>";
 
@@ -126,17 +135,25 @@
     startRole();
   }
   function role() { return !S.me ? null : S.me.isAdmin ? "admin" : S.me.profile.role; }
+  // DoorDash-style navigation: few tabs (none for cleaners, like the Dasher app); everything else is in the ☰ side menu.
   const TABS = {
-    customer: [["book", "plus", "tab_book"], ["orders", "list", "tab_orders"], ["cleaners", "users", "tab_cleaners"], ["account", "user", "tab_account"], ["learn", "spark", "tab_learn"]],
-    worker: [["jobs", "spark", "tab_jobs"], ["myjobs", "check", "tab_myjobs"], ["earnings", "cash", "tab_earnings"], ["profile", "user", "tab_profile"], ["learn", "spark", "tab_learn"]],
-    admin: [["panel", "grid", "tab_panel"], ["analytics", "chart", "tab_analytics"], ["workers", "users", "tab_workers"], ["bookings", "list", "tab_bookings"], ["system", "spark", "tab_system"], ["learn", "spark", "tab_learn"]]
+    customer: [["book", "home", "tab_home"], ["orders", "list", "tab_orders"], ["account", "user", "tab_account"]],
+    worker: [],
+    admin: [["panel", "grid", "tab_panel"], ["bookings", "list", "tab_bookings"], ["workers", "users", "tab_workers"], ["system", "spark", "tab_more"]]
   };
+  const APP_VERSION = "2026.11.2";
+  let DASH = null;
+  const DD = () => DASH || (DASH = window.WCIA_DASH({ t, esc, icon, money, when, svcName, S, CFG, wa, tel, stars, empty, loading, jobTimer, statusBanner, reviewsPanel, role, brainCard, store, tile, lang: () => lang, version: APP_VERSION }));
+  // Screens a role can open (tab bar + side menu + sub-screens), so a saved screen is restored after a reload.
+  const SCREENS = { customer: ["book", "orders", "account", "learn", "help", "cleaners"], worker: ["dash", "myjobs", "earnings", "ratings", "account", "profile", "learn", "help"], admin: ["panel", "bookings", "workers", "system", "analytics", "learn", "account", "connectors"] };
   function startRole() {
     S.screen = "app";
     const r = role();
     document.body.classList.toggle("owner", r === "admin");
+    document.body.classList.toggle("cleaner", r === "worker");
+    S.menuOpen = false; S.outSheet = false; S.notesOpen = false; S.msgs = null;
     const saved = store.get("wcia_tab_" + r, null);
-    S.tab = TABS[r].some((x) => x[0] === saved) ? saved : TABS[r][0][0];
+    S.tab = SCREENS[r].includes(saved) ? saved : r === "worker" ? "dash" : TABS[r][0][0];
     if (r === "worker" && S.me.worker && (!S.me.worker.zips.length || !S.me.worker.services.length) && S.me.worker.status === "pending") S.tab = "profile";
     S.data = {};
     loadTab();
@@ -148,12 +165,22 @@
   async function loadTab(quiet) {
     const tab = S.tab;
     const loaders = {
-      orders: async () => ({ orders: await API.myBookings() }),
+      orders: async () => { const orders = await API.myBookings(); trackChanges(orders); return { orders }; },
       cleaners: async () => ({ cleaners: await API.listWorkers(S.form.dirZip || "", S.form.dirSvc || "") }),
       book: async () => ({ cleaners: await API.listWorkers((S.form.book && S.form.book.zip) || "", (S.form.book && S.form.book.service) || "").catch(() => []) }),
       jobs: async () => { await refreshMe(); return { offers: S.me.worker && S.me.worker.status === "approved" ? await API.myOffers() : [] }; },
-      myjobs: async () => { const jobs = await API.myJobs(); const live = jobs.find((j) => j.status === "in_progress"); if (live) startSharing(live.id); else stopSharing(); return { jobs }; },
+      // Cleaner home: offers, own jobs, demand by zone and the score (for the tier in the menu), in one go.
+      dash: async () => {
+        await refreshMe();
+        const ok = S.me.worker && S.me.worker.status === "approved";
+        const [offers, jobs, demand, score] = await Promise.all([ok ? API.myOffers() : [], API.myJobs(), ok ? API.workerDemand().catch(() => null) : null, API.workerScorecard().catch(() => null)]);
+        shareFor(jobs); S.tier = DD().tierOf(score);
+        return { offers, jobs, demand, score };
+      },
+      myjobs: async () => { const jobs = await API.myJobs(); shareFor(jobs); return { jobs }; },
       earnings: async () => { await refreshMe(); return { jobs: await API.myJobs() }; },
+      ratings: async () => { await refreshMe(); const [score, myReviews] = await Promise.all([API.workerScorecard().catch(() => null), API.myReviews().catch(() => null)]); S.tier = DD().tierOf(score); return { score, myReviews }; },
+      account: async () => (S.me && S.me.isAdmin ? { dev: await API.deviceStatus().catch(() => null) } : {}),
       profile: async () => ({ docs: await API.listDocs(S.me.profile.id).catch(() => []), myReviews: await API.myReviews().catch(() => null) }),
       panel: async () => {
         const notesP = (API.adminBrainNotes ? API.adminBrainNotes() : Promise.resolve([])).catch(() => []);
@@ -188,7 +215,8 @@
     setInterval(() => {
       if (document.hidden || !S.me || S.busy || S.screen !== "app") return;
       if (document.activeElement && /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)) return;
-      if (["jobs", "orders", "panel", "bookings", "myjobs", "analytics"].includes(S.tab) || (S.tab === "system" && S.sys === "updates")) loadTab(true);
+      if (S.menuOpen || S.outSheet || S.notesOpen || S.msgs) { loadNotes(); return; }
+      if (["dash", "jobs", "orders", "panel", "bookings", "myjobs", "analytics"].includes(S.tab) || (S.tab === "system" && S.sys === "updates")) loadTab(true);
       loadNotes();
     }, 20000);
     document.addEventListener("visibilitychange", () => { if (!document.hidden && S.me && S.screen === "app") { loadTab(true); loadNotes(); } });
@@ -200,14 +228,18 @@
     const sameTab = render._last === S.screen + S.tab;
     render._last = S.screen + S.tab;
     root.innerHTML = S.screen === "app" ? appShell() : publicScreen();
+    document.body.classList.toggle("locked", !!(S.menuOpen || S.notesOpen || S.msgs || S.outSheet));
+    if (S.screen === "app") renderBell();
     if (sameTab) window.scrollTo(0, scrollY); else window.scrollTo(0, 0);
     const focus = root.querySelector("[autofocus]"); if (focus && !sameTab) focus.focus();
   }
   function header(extra) {
-    return '<header class="top"><a class="brand" href="/" aria-label="We Clean It All">' +
-      '<img src="/media/mark.svg" alt="" width="40" height="40"><span class="wm">We Clean<b>It All</b></span></a>' +
+    const inApp = S.screen === "app" && S.me;
+    return '<header class="top' + (inApp ? " in" : "") + '">' + (inApp ? DD().menuBtn() : "") + '<a class="brand" href="/" aria-label="We Clean It All">' +
+      '<img src="/media/mark.svg" alt="" width="40" height="40"><span class="wm">We Clean<b>It All</b>' +
+      (inApp ? '<em class="role-tag r-' + role() + '">' + esc(t("role_" + role())) + "</em>" : "") + "</span></a>" +
       '<div class="top-actions"><span class="hdr-time"><span class="hdr-clock" data-clock aria-label="' + esc(t("clock_label")) + '">' + esc(clockText()) + '</span><small class="hdr-date" data-hdr-date>' + esc(headerDate()) + "</small></span>" + (extra || "") +
-      '<button class="chip-btn" data-act="lang" aria-label="' + t("language") + '">' + (lang === "es" ? "EN" : "ES") + "</button></div></header>";
+      (inApp ? "" : '<button class="chip-btn" data-act="lang" aria-label="' + t("language") + '">' + (lang === "es" ? "EN" : "ES") + "</button>") + "</div></header>"; // signed in: language lives in the ☰ menu
   }
   function demoBanner() {
     const guest = S.me && S.me.needsAccount && !S.me.isAdmin ? '<div class="guest-banner"><span>' + esc(t("guest_banner")) + '</span><button class="link-btn" data-act="tab" data-tab="account">' + esc(t("guest_save")) + "</button></div>" : "";
@@ -224,7 +256,9 @@
         '<button class="big-choice" data-act="' + (guestEnabled() ? "guest" : "auth") + '" data-role="customer">' + icon("home", "lg") + "<span><b>" + esc(t("need_cleaning")) + "</b><small>" + esc(t("need_cleaning_sub")) + "</small></span></button>" +
         '<button class="big-choice" data-act="auth" data-role="worker">' + icon("broom", "lg") + "<span><b>" + esc(t("want_work")) + "</b><small>" + esc(t("want_work_sub")) + "</small></span></button>" +
         "</div>" +
-        '<button class="link-btn center" data-act="signin">' + esc(t("have_account")) + "</button>" +
+        // Three doors, so nobody signs in to the wrong side: client, cleaner, owner.
+        '<div class="doors"><p class="label center">' + esc(t("have_account")) + " · " + esc(t("sign_in_as")) + '</p><div class="door-row">' +
+        [["customer", "home"], ["worker", "broom"], ["admin", "shield"]].map(([r, ic]) => '<button class="door d-' + r + '" data-act="signin" data-as="' + r + '">' + icon(ic) + "<span>" + esc(t("role_" + r)) + "</span></button>").join("") + "</div></div>" +
         '<a class="link-btn center" href="/comercial/">' + esc(t("comm_eyebrow")) + "</a>" +
         (API.mode === "demo" ?'<div class="demo-try"><span>' + esc(t("demo_try")) + ':</span><button class="pill" data-act="demo" data-kind="customer">' + esc(t("demo_customer")) +
           '</button><button class="pill" data-act="demo" data-kind="worker">' + esc(t("demo_worker")) + '</button><button class="pill" data-act="demo" data-kind="owner">' + esc(t("demo_owner")) + "</button></div>" : "");
@@ -241,7 +275,10 @@
         '<p class="fine">' + esc(t("terms_note")) + "</p></form>" +
         '<button class="link-btn center" data-act="signin">' + esc(t("have_account")) + "</button>";
     } else if (S.screen === "signin") {
-      body = '<button class="back" data-act="home">‹ ' + esc(t("back")) + "</button><h2>" + esc(t("sign_in")) + "</h2>" +
+      const as = S.signinAs;
+      body = '<button class="back" data-act="home">‹ ' + esc(t("back")) + "</button>" +
+        (as ? '<p class="role-chip r-' + as + '">' + icon({ customer: "home", worker: "broom", admin: "shield" }[as]) + esc(t("role_" + as)) + "</p>" : "") +
+        "<h2>" + esc(as ? t("sign_in_role", { r: t("role_" + as) }) : t("sign_in")) + "</h2>" +
         '<form class="card form" data-form="signin" novalidate>' +
         field("email", t("email"), "email", 'required autocomplete="email" autofocus') +
         field("password", t("password"), "password", 'required autocomplete="current-password"') +
@@ -264,7 +301,8 @@
           field("code", t("mfa_code"), "text", 'required inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" autofocus') +
           (m.enrolled ? '<label class="check"><input type="checkbox" name="remember" value="1"> <span>' + esc(t("mfa_remember")) + "</span></label>" : "") +
           '<button class="btn solid block" type="submit">' + esc(t("mfa_verify")) + '</button><p class="fine">' + esc(t("mfa_why")) + "</p></form>") +
-        '<button class="link-btn center" data-act="skipmfa">' + esc(t("mfa_skip")) + "</button>";
+        '<button class="link-btn center" data-act="skipmfa">' + esc(t("mfa_skip")) + "</button>" +
+        '<button class="link-btn center" data-act="signout-yes">' + icon("out") + esc(t("log_out")) + "</button>";
     } else if (S.screen === "checkemail") {
       body = '<div class="empty big">' + icon("check", "xl") + "<h2>" + esc(t("check_email")) + '</h2><button class="btn ghost" data-act="signin">' + esc(t("sign_in")) + "</button></div>";
     }
@@ -311,15 +349,21 @@
   function appShell() {
     const r = role();
     const tabs = TABS[r];
-    const bell = '<button class="bell" data-act="notes" aria-label="' + esc(t("notifications")) + '">' + icon("bell") + '<b class="dot" id="bell-dot" hidden></b></button>';
+    const bell = '<button class="bell" data-act="notes" aria-label="' + esc(t("notifications")) + '">' + icon("bell") + '<b class="dot" id="bell-dot" hidden></b></button>' +
+      (r !== "admin" ? '<button class="bell" data-act="msgs" aria-label="' + esc(t("messages")) + '">' + icon("chat") + "</button>" : "");
     const strip = (h) => h.replace(/^<h1 class="title">.*?<\/h1>/, "");
-    const views = { book: vBook, orders: vOrders, cleaners: vCleaners, account: vAccount, jobs: vJobs, myjobs: vMyJobs, learn: vLearn, earnings: vEarnings, profile: vProfile, panel: vPanel, workers: vWorkers, bookings: vAdminBookings, connectors: vConnectors,
+    const D = DD();
+    const views = { book: vBook, orders: vOrders, cleaners: vCleaners, account: r === "worker" ? D.vAccount : vAccount, jobs: vJobs, myjobs: vMyJobs, learn: vLearn, earnings: r === "worker" ? D.vEarnings : vEarnings, profile: vProfile, panel: vPanel, workers: vWorkers, bookings: vAdminBookings, connectors: vConnectors,
+      ratings: D.vRatings, help: D.vHelp,
       analytics: () => owner().vAnalytics(), system: () => owner().vSystem({ connectors: () => strip(vConnectors()), account: () => strip(vAccount()) }) };
+    const overlays = verifyModal() + reviewsModal() + D.drawer() + D.signOutSheet() + D.notesPage() + D.messagesPage();
+    // Cleaner home is full screen, like the Dasher app: zones behind, floating buttons on top, one sheet at the bottom.
+    if (r === "worker" && S.tab === "dash") return D.vDash() + '<div id="radioSheetHost"></div>' + overlays;
     return header(bell) + demoBanner() +
-      '<main class="wrap app">' + (views[S.tab] ? views[S.tab]() : "") + "</main>" +
+      '<main class="wrap app' + (tabs.length ? "" : " no-tabs") + '">' + (views[S.tab] ? views[S.tab]() : "") + "</main>" +
       '<div id="radioSheetHost"></div>' + miniRadio() +
-      '<nav class="tabbar n' + tabs.length + '" aria-label="Menu">' + tabs.map(([k, ic, lab]) =>
-        '<button data-act="tab" data-tab="' + k + '"' + (S.tab === k ? ' aria-current="page" class="on"' : "") + ">" + icon(ic) + "<span>" + esc(t(lab)) + "</span></button>").join("") + "</nav>" + verifyModal() + reviewsModal();
+      (tabs.length ? '<nav class="tabbar n' + tabs.length + '" aria-label="' + esc(t("m_menu")) + '">' + tabs.map(([k, ic, lab]) =>
+        '<button data-act="tab" data-tab="' + k + '"' + (S.tab === k ? ' aria-current="page" class="on"' : "") + ">" + icon(ic) + "<span>" + esc(t(lab)) + "</span></button>").join("") + "</nav>" : "") + overlays;
   }
   function renderBell() {
     const dot = $("#bell-dot"); if (!dot) return;
@@ -400,7 +444,20 @@
       API.shareLocation(id, pos.coords.latitude, pos.coords.longitude).catch((e) => console.error(e));
     }, () => { toast(t("loc_denied"), "bad"); stopSharing(); }, { enableHighAccuracy: true, maximumAge: 15000, timeout: 60000 });
   };
-  const liveLoc = (b) => b.status === "in_progress" && b.worker_lat != null
+  // Share GPS while cleaning, and also on the way to the job once the cleaner taps "I'm on my way".
+  const shareFor = (jobs) => { const live = (jobs || []).find((j) => j.status === "in_progress" || (j.status === "assigned" && j.on_way_at)); if (live) startSharing(live.id); else stopSharing(); };
+  // Customer tracker: when an order moves to the next step while the app is open, say so right away.
+  let lastStages = null;
+  const trackChanges = (orders) => {
+    const now = {};
+    (orders || []).forEach((b) => { now[b.id] = b.status === "cancelled" ? -1 : DD().stage(b); });
+    if (lastStages) {
+      const moved = (orders || []).find((b) => lastStages[b.id] != null && now[b.id] > lastStages[b.id]);
+      if (moved) toast(t(["", "n_booking_assigned", "n_cleaner_on_way", "n_job_started", "n_booking_completed"][now[moved.id]], { code: moved.code }), "ok");
+    }
+    lastStages = now;
+  };
+  const liveLoc = (b) => (b.status === "in_progress" || (b.status === "assigned" && b.on_way_at)) && b.worker_lat != null
     ? '<span class="row gap wrap-row"><a class="btn ghost small live-loc" target="_blank" rel="noopener" href="https://www.google.com/maps?q=' + encodeURIComponent(b.worker_lat + "," + b.worker_lng) + '">' + icon("pin") + "<span>" + esc(t("see_live")) + '</span> · <small data-since="' + esc(b.location_at) + '">' + esc(t("loc_now")) + '</small></a><a class="btn ghost small" target="_blank" rel="noopener" href="https://earth.google.com/web/search/' + encodeURIComponent(b.worker_lat + "," + b.worker_lng) + '">Google Earth</a></span>'
     : "";
   const empty = (ic, title, sub, btn) => '<div class="empty">' + icon(ic, "xl") + "<h3>" + esc(title) + "</h3>" + (sub ? "<p>" + esc(sub) + "</p>" : "") + (btn || "") + "</div>";
@@ -600,7 +657,7 @@
         '<div class="row between"><b class="code">' + esc(b.code) + "</b>" + status + "</div>" +
         "<h3>" + esc(svcName(b.service)) + "</h3>" +
         '<p class="meta">' + icon("clock") + esc(b.urgency === "asap" ? t("asap") : when(b.scheduled_at)) + " · " + icon("pin") + esc(b.city || b.zip) + "</p>" +
-        timeline(b.status) + jobTimer(b) + liveLoc(b) + (b.status === "in_progress" ? jobMap(b) : "") +
+        DD().tracker(b) + jobTimer(b) + liveLoc(b) + (b.status === "in_progress" ? jobMap(b) : "") +
         (b.status === "offered" ? '<p class="muted">' + esc(t("sent_to", { n: b.offers_sent })) + "</p>" : "") +
         (w ? '<div class="person"><div class="avatar">' + esc((w.name || "?")[0]) + "</div><div><small>" + esc(t("your_cleaner")) + "</small><b>" + esc(w.name) + "</b>" +
           (w.company_name ? "<small>" + esc(w.company_name) + "</small>" : "") + (w.rating_count ? '<small class="stars">' + stars(w.rating_avg) + " " + Number(w.rating_avg).toFixed(1) + "</small>" : "") + "</div></div>" +
@@ -867,7 +924,8 @@
       (b.status !== "completed" ? '<div class="row gap wrap-row"><a class="btn ghost small" href="' + tel(b.customer.phone) + '">' + icon("phone") + esc(t("call")) + "</a>" +
         '<a class="btn wa small" target="_blank" rel="noopener" href="' + wa(b.customer.phone, t("wa_msg_customer", { name: S.me.profile.full_name, code: b.code })) + '">' + icon("chat") + "WhatsApp</a>" +
         '<a class="btn ghost small" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent([b.address, b.city, b.zip, "FL"].filter(Boolean).join(", ")) + '">' + icon("pin") + esc(t("directions")) + "</a></div>" +
-        (b.status === "assigned" ? '<button class="btn solid block" data-act="start" data-id="' + b.id + '">' + esc(t("start_job")) + "</button>" :
+        (b.status === "assigned" ? (b.on_way_at ? "" : '<button class="btn solid block" data-act="onway" data-id="' + b.id + '">' + icon("nav") + esc(t("on_my_way")) + "</button>") +
+          '<button class="btn ' + (b.on_way_at ? "solid" : "ghost") + ' block" data-act="start" data-id="' + b.id + '">' + esc(t("start_job")) + "</button>" :
           '<div class="job-actions">' + (b.paused_at ? '<button class="btn ghost" data-act="resume" data-id="' + b.id + '">' + icon("clock") + esc(t("timer_resume")) + "</button>" :
             '<button class="btn ghost" data-act="pause" data-id="' + b.id + '">' + esc(t("timer_pause")) + "</button>") +
           '<button class="btn solid" data-act="complete" data-id="' + b.id + '">' + icon("check") + esc(t("finish_job")) + "</button></div>") :
@@ -1045,20 +1103,25 @@
       row("pin", t("conn_maps"), "ZIP", "", t("conn_maps_desc")) + "</div>";
   }
 
-  // ── notifications sheet ──
-  function openNotes() {
-    const items = S.notes;
-    const sheet = document.createElement("div");
-    sheet.className = "sheet-wrap";
-    sheet.innerHTML = '<div class="sheet" role="dialog" aria-modal="true" aria-label="' + esc(t("notifications")) + '"><div class="row between"><h2>' + esc(t("notifications")) + '</h2><button class="chip-btn" data-close>' + esc(t("close")) + "</button></div>" +
-      (items.length ? '<ul class="notes">' + items.map((n) => '<li class="' + (n.read_at ? "" : "new") + '"><b>' + esc(t("n_" + n.template, { code: (n.payload && n.payload.code) || "" })) + "</b><small>" + esc(when(n.created_at)) + "</small></li>").join("") + "</ul>" : '<p class="muted">' + esc(t("no_notifications")) + "</p>") + "</div>";
-    document.body.appendChild(sheet);
-    const close = () => { sheet.remove(); };
-    sheet.addEventListener("click", (e) => { if (e.target === sheet || e.target.closest("[data-close]")) close(); });
-    document.addEventListener("keydown", function k(e) { if (e.key === "Escape") { close(); document.removeEventListener("keydown", k); } });
-    sheet.querySelector("[data-close]").focus();
-    API.markRead().then(loadNotes).catch(() => {});
+  // ── messages page: the people on your current job, plus support (chat happens on WhatsApp or by phone) ──
+  async function openMessages() {
+    S.menuOpen = false; S.msgs = { loading: true, items: [] }; render();
+    const r = role(), me = S.me.profile.full_name;
+    try {
+      if (r === "worker") {
+        const jobs = S.data.jobs || await API.myJobs();
+        S.msgs = { items: jobs.filter((b) => ["assigned", "in_progress"].includes(b.status)).map((b) => ({ tag: "customer", name: b.customer && b.customer.name, phone: b.customer && b.customer.phone, code: b.code, text: t("wa_msg_customer", { name: me, code: b.code }) })) };
+      } else if (r === "customer") {
+        const orders = S.data.orders || await API.myBookings();
+        S.msgs = { items: orders.filter((b) => b.worker && ["assigned", "in_progress"].includes(b.status)).map((b) => ({ tag: "cleaner", name: b.worker.name, phone: b.worker.phone, code: b.code, text: t("wa_msg_customer", { name: me, code: b.code }) })) };
+      } else S.msgs = { items: [] };
+    } catch (e) { console.error(e); S.msgs = { items: [] }; }
+    if (S.msgs) render();
   }
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape" || S.screen !== "app") return;
+    if (S.menuOpen || S.outSheet || S.notesOpen || S.msgs) { S.menuOpen = false; S.outSheet = false; S.notesOpen = false; S.msgs = null; render(); }
+  });
 
   // ───────── events ─────────
   function formData(form) {
@@ -1076,7 +1139,7 @@
     e.preventDefault();
     if (a === "lang") { lang = lang === "es" ? "en" : "es"; store.set("wcia_lang", lang); document.documentElement.lang = lang; render(); }
     else if (a === "auth") { S.authRole = el.dataset.role; S.form.kind = "individual"; S.screen = "signup"; render(); }
-    else if (a === "signin") { S.screen = "signin"; render(); }
+    else if (a === "signin") { S.signinAs = el.dataset.as || (S.screen === "signup" ? S.authRole : S.screen === "forgot" ? S.signinAs : null); S.screen = "signin"; render(); }
     else if (a === "agentsall") { const off = ((S.data && S.data.agents) || []).filter((x) => x.status !== "active"); try { for (const x of off) await API.adminSetAgentStatus(x.agent, "active"); toast(t("saved")); } catch (err) { console.error(err); toast(t("error_generic"), "bad"); } loadTab(true); }
     else if (a === "devforget" || a === "devforgetall") { try { await API.revokeDevices(a === "devforgetall"); toast(t("saved")); } catch (err) { console.error(err); } loadTab(true); }
     else if (a === "guest") {
@@ -1094,9 +1157,35 @@
     else if (a === "home") { S.screen = "landing"; render(); }
     else if (a === "demo") { await API.demoLogin(el.dataset.kind); S.me = await API.me(); startRole(); }
     else if (a === "demoreset") { await API.demoReset(); S.me = null; S.screen = "landing"; S.form = {}; render(); }
-    else if (a === "tab") { S.tab = el.dataset.tab; store.set("wcia_tab_" + role(), S.tab); S.data = {}; loadTab(); }
-    else if (a === "notes") openNotes();
-    else if (a === "signout") { await API.signOut(); S.me = null; S.screen = "landing"; S.form = {}; render(); }
+    else if (a === "tab") { S.menuOpen = false; S.outSheet = false; S.notesOpen = false; S.msgs = null; S.tab = el.dataset.tab; store.set("wcia_tab_" + role(), S.tab); S.data = {}; loadTab(); }
+    // ☰ side menu, log out, notifications and messages pages
+    else if (a === "menu") { S.menuOpen = true; render(); }
+    else if (a === "menuclose") { S.menuOpen = false; render(); }
+    else if (a === "noop") { /* tap inside the menu panel */ }
+    else if (a === "notes") { S.notesNew = new Set((S.notes || []).filter((n) => !n.read_at).map((n) => n.id)); S.notesOpen = true; S.menuOpen = false; render(); API.markRead().then(loadNotes).catch(() => {}); }
+    else if (a === "notesclose") { S.notesOpen = false; render(); }
+    else if (a === "msgs") openMessages();
+    else if (a === "msgsclose") { S.msgs = null; render(); }
+    else if (a === "signout") { S.outSheet = true; S.menuOpen = false; render(); }
+    else if (a === "signout-cancel") { S.outSheet = false; render(); }
+    else if (a === "signout-yes" || a === "signout-all") {
+      const all = a === "signout-all";
+      S.outSheet = false; stopSharing();
+      if (all && S.me && S.me.isAdmin) await API.revokeDevices(true).catch(() => {}); // also forget "remember this device"
+      await API.signOut(all);
+      S.me = null; S.screen = "landing"; S.form = {}; S.data = {}; S.notes = []; S.tier = null; S.mfa = null; S.skipMfa = false; lastStages = null; render();
+    }
+    // Cleaner: go active / stop, on my way, weekly goal
+    else if (a === "goactive" || a === "gooffline") {
+      await run(() => API.saveWorker(S.me.profile.id, { available: a === "goactive" })).catch(() => {});
+      await refreshMe(); loadTab(true);
+    }
+    else if (a === "onway") { await run(() => API.onMyWay(id), t("onway_sent")).then(() => startSharing(id)).catch(() => {}); loadTab(true); }
+    else if (a === "goal") {
+      const cur = store.get(DD().goalKey(), "");
+      const v = window.prompt(t("goal_prompt"), cur);
+      if (v != null) { const n = Math.max(0, Math.min(100000, Math.round(Number(String(v).replace(/[^\d.]/g, "")) || 0))); store.set(DD().goalKey(), n ? String(n) : ""); render(); }
+    }
     else if (a === "reload") loadTab();
     else if (a === "step") {
       const inp = root.querySelector('input[name="' + el.dataset.name + '"]');
@@ -1286,7 +1375,11 @@
         if (r && r.confirmed) { S.me = await API.me(); afterLogin(); } else { S.screen = "checkemail"; render(); }
       } else if (kind === "signin") {
         await run(() => API.signIn({ email: d.email.trim(), password: d.password }));
-        S.me = await API.me(); afterLogin();
+        S.me = await API.me();
+        // Three separate doors (client, cleaner, owner): say which account this is, especially if it's not the door they used.
+        const got = role(), want = S.signinAs;
+        if (got) toast(want && want !== got ? t("signed_other", { r: t("role_" + got) }) : t("signed_as", { r: t("role_" + got) }), want && want !== got ? "bad" : "ok");
+        S.signinAs = null; afterLogin();
       } else if (kind === "forgot") {
         await run(() => API.resetPassword(d.email.trim()), t("reset_sent")); S.screen = "signin"; render();
       } else if (kind === "newpass") {

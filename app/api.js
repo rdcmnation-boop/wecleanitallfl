@@ -147,9 +147,10 @@
         await raw("/auth/v1/user", { method: "PUT", headers: { apikey: KEY, Authorization: "Bearer " + t, "Content-Type": "application/json" }, body: JSON.stringify({ password }) });
         recovery = false;
       },
-      async signOut() {
+      // everywhere = end every session of this account (all phones and computers), not just this one.
+      async signOut(everywhere) {
         const t = await token().catch(() => null);
-        if (t) await raw("/auth/v1/logout", { method: "POST", headers: { apikey: KEY, Authorization: "Bearer " + t } }).catch(() => {});
+        if (t) await raw("/auth/v1/logout" + (everywhere ? "?scope=global" : ""), { method: "POST", headers: { apikey: KEY, Authorization: "Bearer " + t } }).catch(() => {});
         saveSession(null);
       },
       async me() {
@@ -213,6 +214,9 @@
       pauseJob: (id) => rpc("pause_job", { p_booking: id }),
       resumeJob: (id) => rpc("resume_job", { p_booking: id }),
       shareLocation: (id, lat, lng) => rpc("share_location", { p_booking: id, p_lat: lat, p_lng: lng }),
+      onMyWay: (id) => rpc("on_my_way", { p_booking: id }),
+      workerDemand: () => rpc("worker_demand"),
+      workerScorecard: () => rpc("worker_scorecard"),
       notifications: () => rest("/notifications?select=id,template,payload,created_at,read_at&channel=eq.inapp&order=created_at.desc&limit=30"),
       markRead: () => rpc("mark_notifications_read"),
       adminStats: () => rpc("admin_stats"),
@@ -517,13 +521,35 @@
           .sort((a, b) => (a.status === "completed") - (b.status === "completed") || String(a.scheduled_at || a.created_at).localeCompare(String(b.scheduled_at || b.created_at)))
           .map((b) => { const c = P(db, b.customer_id); const r = db.reviews.find((x) => x.booking_id === b.id); return Object.assign({}, b, { customer: { name: c.full_name, phone: c.phone }, review: r ? { rating: r.rating, comment: r.comment } : null }); });
       },
-      async startJob(id) { const db = load(); const b = db.bookings.find((x) => x.id === id && x.worker_id === uid && x.status === "assigned"); need(b); b.status = "in_progress"; b.started_at = now(); save(db); },
+      async startJob(id) { const db = load(); const b = db.bookings.find((x) => x.id === id && x.worker_id === uid && x.status === "assigned"); need(b); b.status = "in_progress"; b.started_at = now(); note(db, b.customer_id, "job_started", { code: b.code }); save(db); },
+      async onMyWay(id) {
+        const db = load(); const b = db.bookings.find((x) => x.id === id && x.worker_id === uid && x.status === "assigned"); need(b);
+        if (!b.on_way_at) { b.on_way_at = now(); note(db, b.customer_id, "cleaner_on_way", { code: b.code }); }
+        save(db);
+      },
+      async workerDemand() {
+        await tick(); const db = load(); const w = W(db, uid); if (!w || w.status !== "approved") return null;
+        const z = {};
+        db.bookings.filter((b) => ["requested", "offered"].includes(b.status)).forEach((b) => { (z[b.zip] = z[b.zip] || { zip: b.zip, city: b.city || "", n: 0 }).n++; });
+        const mins = db.bookings.filter((b) => b.assigned_at && b.created_at).map((b) => (Date.parse(b.assigned_at) - Date.parse(b.created_at)) / 60000).sort((a, c) => a - c);
+        return { zones: Object.values(z).sort((a, c) => c.n - a.n).slice(0, 12), avg_wait_min: mins.length ? Math.round(mins[Math.floor(mins.length / 2)]) : null };
+      },
+      async workerScorecard() {
+        await tick(); const db = load(); const w = W(db, uid); if (!w) return null;
+        const ans = db.offers.filter((o) => o.worker_id === uid && ["accepted", "declined"].includes(o.status));
+        const mine = db.bookings.filter((b) => b.worker_id === uid), started = mine.filter((b) => b.started_at);
+        const onTime = started.filter((b) => b.urgency === "asap" ? b.assigned_at && Date.parse(b.started_at) <= Date.parse(b.assigned_at) + 90 * 60000 : b.scheduled_at && Date.parse(b.started_at) <= Date.parse(b.scheduled_at) + 15 * 60000);
+        const rs = db.reviews.filter((r) => r.worker_id === uid), m30 = Date.now() - 30 * 864e5;
+        return { offers_answered: ans.length, accepted: ans.filter((o) => o.status === "accepted").length, started: started.length, on_time: onTime.length,
+          rating_avg: rs.length ? rs.reduce((s, r) => s + r.rating, 0) / rs.length : null, rating_count: rs.length, good_reviews: rs.filter((r) => r.rating >= 4).length,
+          jobs_30d: mine.filter((b) => b.status === "completed" && Date.parse(b.completed_at) > m30).length, jobs_done: w.jobs_done };
+      },
       async pauseJob(id) { const db = load(); const b = db.bookings.find((x) => x.id === id && x.worker_id === uid && x.status === "in_progress" && !x.paused_at); need(b); b.paused_at = now(); save(db); },
       async resumeJob(id) { const db = load(); const b = db.bookings.find((x) => x.id === id && x.worker_id === uid && x.status === "in_progress" && x.paused_at); need(b); b.paused_seconds = (b.paused_seconds || 0) + Math.max(0, Math.floor((Date.now() - Date.parse(b.paused_at)) / 1000)); b.paused_at = null; save(db); },
       async workerReviews(id) { await tick(); return reviewSummary(load(), id); },
       async myReviews() { await tick(); return reviewSummary(load(), uid); },
       async adminLiveJobs(zip) { const db = load(); need(db.admins.includes(uid), "admin_only"); return db.bookings.filter((b) => b.status === "in_progress" && b.worker_lat != null && (!zip || b.zip === zip)).map((b) => ({ id: b.id, code: b.code, service: b.service, zip: b.zip, city: b.city, lat: b.worker_lat, lng: b.worker_lng, location_at: b.location_at, worker: (P(db, b.worker_id) || {}).full_name || "" })); },
-      async shareLocation(id, lat, lng) { const db = load(); const b = db.bookings.find((x) => x.id === id && x.worker_id === uid && x.status === "in_progress"); need(b, "not_allowed"); b.worker_lat = Number(lat.toFixed(5)); b.worker_lng = Number(lng.toFixed(5)); b.location_at = now(); save(db); },
+      async shareLocation(id, lat, lng) { const db = load(); const b = db.bookings.find((x) => x.id === id && x.worker_id === uid && (x.status === "in_progress" || (x.status === "assigned" && x.on_way_at))); need(b, "not_allowed"); b.worker_lat = Number(lat.toFixed(5)); b.worker_lng = Number(lng.toFixed(5)); b.location_at = now(); save(db); },
       async completeJob(id) {
         const db = load(); const b = db.bookings.find((x) => x.id === id && x.worker_id === uid && ["assigned", "in_progress"].includes(x.status)); need(b);
         b.status = "completed"; b.completed_at = now(); W(db, uid).jobs_done++; note(db, b.customer_id, "booking_completed", { code: b.code }); save(db);
