@@ -12,6 +12,8 @@ window.WCIA_CONFIG = {
   // How guests prove they are a person: "email" (free, works now: a code to their email) or "phone"
   // (code by WhatsApp, then SMS; needs the Phone provider with Twilio in Supabase Auth).
   GUEST_VERIFY: "email",
+  // Google Maps key (Maps Embed API, enabled in a Google Cloud project with billing). Empty = no map, directions button only.
+  GOOGLE_MAPS_KEY: "",
   // Suggested hourly rate used only to pre-fill an estimate the customer can change.
   SUGGESTED_HOURLY: 30,
   // Owner contact shown to customers and cleaners.

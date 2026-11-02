@@ -332,6 +332,23 @@
     return CONSOLE.ask(text, S.data.agents || []);
   };
   const loading = () => '<div class="skeleton"><i></i><i></i><i></i></div>';
+  // Live job timer (from the real start time) and an optional Google Map (needs CFG.GOOGLE_MAPS_KEY).
+  const jobTimer = (b) => b.status === "in_progress" && b.started_at ? '<p class="job-timer" data-started="' + esc(b.started_at) + '">' + icon("clock") + "<span>" + esc(t("timer_label")) + ' <b class="tval">--:--</b></span></p>' : "";
+  const jobMap = (b) => {
+    if (!CFG.GOOGLE_MAPS_KEY) return "";
+    const q = [b.address, b.city, b.zip, "FL"].filter(Boolean).join(", ");
+    if (!q.trim()) return "";
+    return '<div class="job-map"><iframe title="' + esc(t("map_label")) + '" loading="lazy" referrerpolicy="no-referrer-when-downgrade" src="https://www.google.com/maps/embed/v1/place?key=' + encodeURIComponent(CFG.GOOGLE_MAPS_KEY) + "&q=" + encodeURIComponent(q) + '"></iframe></div>';
+  };
+  const tickTimers = () => {
+    document.querySelectorAll(".job-timer").forEach((el) => {
+      const s = Math.max(0, Math.floor((Date.now() - Date.parse(el.dataset.started)) / 1000));
+      const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), x = s % 60;
+      const v = (h ? h + ":" : "") + String(m).padStart(2, "0") + ":" + String(x).padStart(2, "0");
+      const b = el.querySelector(".tval"); if (b && b.textContent !== v) b.textContent = v;
+    });
+  };
+  setInterval(tickTimers, 1000);
   const empty = (ic, title, sub, btn) => '<div class="empty">' + icon(ic, "xl") + "<h3>" + esc(title) + "</h3>" + (sub ? "<p>" + esc(sub) + "</p>" : "") + (btn || "") + "</div>";
 
   // ── customer: book ──
@@ -399,7 +416,7 @@
         '<div class="row between"><b class="code">' + esc(b.code) + "</b>" + status + "</div>" +
         "<h3>" + esc(svcName(b.service)) + "</h3>" +
         '<p class="meta">' + icon("clock") + esc(b.urgency === "asap" ? t("asap") : when(b.scheduled_at)) + " · " + icon("pin") + esc(b.city || b.zip) + "</p>" +
-        timeline(b.status) +
+        timeline(b.status) + jobTimer(b) + (b.status === "in_progress" ? jobMap(b) : "") +
         (b.status === "offered" ? '<p class="muted">' + esc(t("sent_to", { n: b.offers_sent })) + "</p>" : "") +
         (w ? '<div class="person"><div class="avatar">' + esc((w.name || "?")[0]) + "</div><div><small>" + esc(t("your_cleaner")) + "</small><b>" + esc(w.name) + "</b>" +
           (w.company_name ? "<small>" + esc(w.company_name) + "</small>" : "") + (w.rating_count ? '<small class="stars">' + stars(w.rating_avg) + " " + Number(w.rating_avg).toFixed(1) + "</small>" : "") + "</div></div>" +
@@ -504,7 +521,8 @@
       '<div class="row between"><b class="code">' + esc(b.code) + '</b><span class="pill st-' + b.status + '">' + esc(t("st_" + b.status)) + "</span></div>" +
       "<h3>" + esc(svcName(b.service)) + "</h3>" +
       '<p class="meta">' + icon("clock") + esc(b.urgency === "asap" ? t("asap") : when(b.scheduled_at)) + " · " + money(b.budget) + (b.hours_est ? " · " + b.hours_est + " h" : "") + "</p>" +
-      (b.status !== "completed" ? '<p class="addr">' + icon("pin") + "<span>" + esc([b.address, b.city, b.zip].filter(Boolean).join(", ")) + "</span></p>" : "") +
+      jobTimer(b) +
+      (b.status !== "completed" ? '<p class="addr">' + icon("pin") + "<span>" + esc([b.address, b.city, b.zip].filter(Boolean).join(", ")) + "</span></p>" + (b.status === "in_progress" ? jobMap(b) : "") : "") +
       (b.notes ? '<p class="bio">' + esc(b.notes) + "</p>" : "") +
       '<div class="person"><div class="avatar">' + esc((b.customer.name || "?")[0]) + "</div><div><small>" + esc(t("customer")) + "</small><b>" + esc(b.customer.name) + "</b></div></div>" +
       (b.status !== "completed" ? '<div class="row gap wrap-row"><a class="btn ghost small" href="' + tel(b.customer.phone) + '">' + icon("phone") + esc(t("call")) + "</a>" +
