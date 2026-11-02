@@ -50,4 +50,5 @@ function createTools({ rpc, now = () => Date.now() }) {
   };
 }
 
-module.exports = { createTools };
+if (typeof module !== 'undefined' && module.exports) module.exports = { createTools };
+else if (typeof window !== 'undefined') window.WCIA_TOOLS = { createTools };
