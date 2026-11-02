@@ -435,6 +435,7 @@ select{appearance:none;background-image:linear-gradient(45deg,transparent 50%,va
 .brain-me{align-self:flex-end;background:rgba(162,234,79,.16)}
 .brain-bot{align-self:flex-start;background:rgba(255,255,255,.06)}
 .brain form input{flex:1;min-width:0}
+.brain-mic{min-width:44px;justify-content:center;padding-inline:10px}
 .zip-map{margin:-4px 0 0}
 .zip-map:empty{display:none}
 .sec{border-radius:20px;border:1px solid rgba(162,234,79,.22);background:rgba(10,20,13,.6);overflow:hidden}

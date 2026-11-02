@@ -42,6 +42,7 @@
     users: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>',
     user: '<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>',
     bulb: '<path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/>',
+    mic: '<rect x="9" y="3" width="6" height="12" rx="3"/><path d="M19 11a7 7 0 0 1-14 0M12 18v3"/>',
     spark: '<path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M5.6 18.4l2.8-2.8M15.6 8.4l2.8-2.8"/>',
     check: '<path d="M20 6 9 17l-5-5"/>',
     cash: '<rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 12h.01M18 12h.01"/>',
@@ -407,7 +408,9 @@
     const title = role === "owner" ? t("brain_title_owner") : role === "worker" ? t("brain_title_worker") : t("brain_title_customer");
     return '<section class="card stack brain" aria-label="' + esc(title) + '"><p class="label">' + icon("spark") + esc(title) + "</p>" +
       '<div class="brain-log" aria-live="polite">' + (log.length ? log.map((m) => '<p class="brain-' + m.from + '">' + esc(m.text) + "</p>").join("") : '<p class="fine">' + esc(t("brain_hint")) + "</p>") + "</div>" +
-      '<form class="row gap" data-form="brain" data-role="' + role + '" novalidate><input name="message" maxlength="500" autocomplete="off" placeholder="' + esc(t("brain_ask")) + '"><button class="btn solid small" type="submit">' + esc(t("brain_send")) + "</button></form></section>";
+      '<form class="row gap" data-form="brain" data-role="' + role + '" novalidate><input name="message" maxlength="500" autocomplete="off" placeholder="' + esc(t("brain_ask")) + '">' +
+      '<button class="btn ghost small brain-mic" type="button" data-act="brainmic" data-role="' + role + '" aria-label="' + esc(t("brain_voice")) + '" title="' + esc(t("brain_voice")) + '">' + icon("mic") + "</button>" +
+      '<button class="btn solid small" type="submit">' + esc(t("brain_send")) + "</button></form></section>";
   }
   // Only what that user is allowed to see goes to the brain: no addresses, phones or notes.
   function brainContext(role) {
@@ -418,6 +421,8 @@
   }
   async function brainAsk(form) {
     const role = form.dataset.role, text = String(new FormData(form).get("message") || "").trim();
+    const byVoice = form.dataset.voice === "1";
+    delete form.dataset.voice;
     if (!text) return;
     S.brain = S.brain || {};
     const log = (S.brain[role] = S.brain[role] || []);
@@ -428,7 +433,40 @@
     log.pop();
     log.push({ from: "bot", text: res && res.reply ? res.reply : res && res.mode === "off" ? t("brain_off") : t("brain_error") });
     if (log.length > 30) log.splice(0, log.length - 30);
+    if (byVoice && res && res.reply) brainSpeak(res.reply);
     render();
+  }
+  // Voice in: the words go to the same assistant as typing. Stays on the device's own speech service (no key needed).
+  function brainListen(role) {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) { toast(t("brain_voice_no"), "bad"); return; }
+    let rec;
+    try { rec = new SR(); } catch (e) { toast(t("brain_voice_no"), "bad"); return; }
+    rec.lang = lang === "es" ? "es-US" : "en-US";
+    rec.interimResults = false;
+    rec.maxAlternatives = 1;
+    rec.onresult = (ev) => {
+      const said = String((((ev.results || [])[0] || [])[0] || {}).transcript || "").trim();
+      const form = document.querySelector('form[data-form="brain"][data-role="' + role + '"]');
+      if (!said || !form) return;
+      document.querySelectorAll(".toast").forEach((x) => x.remove());
+      form.querySelector('input[name="message"]').value = said;
+      form.dataset.voice = "1";
+      if (form.requestSubmit) form.requestSubmit(); else form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+    };
+    rec.onerror = (ev) => toast(t(ev.error === "not-allowed" || ev.error === "service-not-allowed" ? "brain_voice_denied" : "brain_voice_err"), "bad");
+    toast(t("brain_voice_listen"));
+    try { rec.start(); } catch (e) { toast(t("brain_voice_err"), "bad"); }
+  }
+  // Voice out: a spoken question gets its answer read aloud. Typed questions stay silent.
+  function brainSpeak(text) {
+    try {
+      if (!("speechSynthesis" in window) || !window.SpeechSynthesisUtterance || !text) return;
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = lang === "es" ? "es-US" : "en-US";
+      speechSynthesis.cancel();
+      speechSynthesis.speak(u);
+    } catch (e) { /* reading aloud is optional */ }
   }
   function vBook() {
     const f = S.form.book || (S.form.book = { segment: "residential", service: "standard", bedrooms: 2, bathrooms: 1, frequency: "once", urgency: "scheduled" });
@@ -806,6 +844,7 @@
       try { await API.guestStart(lang); S.me = await API.me(); startRole(); }
       catch (err) { console.error(err); S.authRole = "customer"; S.form.kind = "individual"; S.screen = "signup"; render(); } // guest not available: normal sign-up
     }
+    else if (a === "brainmic") brainListen(el.dataset.role);
     else if (a === "reviews") { S.rv = { name: el.dataset.name || "", data: null }; render(); try { S.rv.data = await API.workerReviews(el.dataset.id); } catch (err) { console.error(err); S.rv.data = { avg: 0, count: 0, dist: {}, items: [] }; } render(); }
     else if (a === "rvclose") { S.rv = null; render(); }
     else if (a === "verifycancel") { S.verify = null; render(); }
