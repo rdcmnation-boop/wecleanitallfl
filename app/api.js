@@ -219,6 +219,7 @@
       adminActivity: () => rpc("admin_activity"),
       adminWorkers: () => rpc("admin_workers"),
       adminBookings: () => rpc("admin_bookings"),
+      adminLiveJobs: (zip) => rpc("admin_live_jobs", { p_zip: zip || "" }),
       adminSetWorkerStatus: (id, s) => rpc("admin_set_worker_status", { p_worker: id, p_status: s }),
       adminAssign: (b, w) => rpc("admin_assign", { p_booking: b, p_worker: w }),
       // Agent controls (owner only; the database enforces owner + 2-step).
@@ -487,6 +488,7 @@
           .map((b) => { const c = P(db, b.customer_id); const r = db.reviews.find((x) => x.booking_id === b.id); return Object.assign({}, b, { customer: { name: c.full_name, phone: c.phone }, review: r ? { rating: r.rating, comment: r.comment } : null }); });
       },
       async startJob(id) { const db = load(); const b = db.bookings.find((x) => x.id === id && x.worker_id === uid && x.status === "assigned"); need(b); b.status = "in_progress"; b.started_at = now(); save(db); },
+      async adminLiveJobs(zip) { const db = load(); need(db.admins.includes(uid), "admin_only"); return db.bookings.filter((b) => b.status === "in_progress" && b.worker_lat != null && (!zip || b.zip === zip)).map((b) => ({ id: b.id, code: b.code, service: b.service, zip: b.zip, city: b.city, lat: b.worker_lat, lng: b.worker_lng, location_at: b.location_at, worker: (P(db, b.worker_id) || {}).full_name || "" })); },
       async shareLocation(id, lat, lng) { const db = load(); const b = db.bookings.find((x) => x.id === id && x.worker_id === uid && x.status === "in_progress"); need(b, "not_allowed"); b.worker_lat = Number(lat.toFixed(5)); b.worker_lng = Number(lng.toFixed(5)); b.location_at = now(); save(db); },
       async completeJob(id) {
         const db = load(); const b = db.bookings.find((x) => x.id === id && x.worker_id === uid && ["assigned", "in_progress"].includes(x.status)); need(b);

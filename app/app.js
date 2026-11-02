@@ -659,6 +659,20 @@
   function offerText(b) {
     return t("wa_msg_offer", { code: b.code, service: svcName(b.service), area: (b.city ? b.city + " " : "") + b.zip, when: b.urgency === "asap" ? t("asap") : when(b.scheduled_at), pay: money(b.budget), url: CFG.APP_URL || location.href });
   }
+  // Owner-only live map: cleaners currently sharing location on jobs in progress, filtered by ZIP (empty = all).
+  function liveMapCard() {
+    const jobs = S.data.live;
+    let html = '<section class="card stack"><p class="label">' + icon("pin") + esc(t("live_map")) + '</p><form class="row gap" data-form="livemap"><input name="zip" inputmode="numeric" maxlength="5" placeholder="' + esc(t("search_zip")) + '" value="' + esc(S.form.liveZip || "") + '" aria-label="' + esc(t("search_zip")) + '"><button class="btn solid small" type="submit">OK</button></form>';
+    if (!jobs) return html + '<p class="muted">' + esc(t("live_hint")) + "</p></section>";
+    if (!jobs.length) return html + '<p class="muted">' + esc(t("live_none")) + "</p></section>";
+    const lats = jobs.map((j) => j.lat), lngs = jobs.map((j) => j.lng), c = jobs[0];
+    const bbox = [Math.min(...lngs) - 0.01, Math.min(...lats) - 0.01, Math.max(...lngs) + 0.01, Math.max(...lats) + 0.01].join(",");
+    html += '<div class="job-map"><iframe title="' + esc(t("live_map")) + '" loading="lazy" src="https://www.openstreetmap.org/export/embed.html?bbox=' + bbox + "&layer=mapnik&marker=" + c.lat + "," + c.lng + '"></iframe></div>';
+    html += jobs.map((j) => '<p class="row between"><span><b>' + esc(j.code) + "</b> · " + esc(j.worker || "") + ' · <small data-since="' + esc(j.location_at) + '">' + esc(t("loc_now")) + "</small></span>" +
+      '<a class="btn ghost small" target="_blank" rel="noopener" href="https://www.google.com/maps?q=' + encodeURIComponent(j.lat + "," + j.lng) + '">Google Maps</a></p>').join("");
+    return html + "</section>";
+  }
+
   function vAdminBookings() {
     const all = S.data.bookings;
     if (S.data.loading && !all) return loading();
@@ -667,7 +681,7 @@
     const list = (all || []).filter((b) => !groups[f] || groups[f].includes(b.status));
     const approved = (S.data.workers || []).filter((w) => w.status === "approved");
     const label = { open: t("m_open"), active: t("m_active"), done: t("st_completed"), all: t("filter_all") };
-    return '<h1 class="title">' + esc(t("tab_bookings")) + "</h1>" +
+    return '<h1 class="title">' + esc(t("tab_bookings")) + "</h1>" + liveMapCard() +
       '<div class="chips scroll">' + Object.keys(groups).map((g) => '<button class="chip-btn' + (f === g ? " on" : "") + '" data-act="bfilter" data-f="' + g + '">' + esc(label[g]) + " " + (all || []).filter((b) => !groups[g] || groups[g].includes(b.status)).length + "</button>").join("") + "</div>" +
       (!list.length ? empty("list", t("no_bookings")) : list.map((b) => '<article class="card order' + (b.status === "requested" ? " hot" : "") + '">' +
         '<div class="row between"><b class="code">' + esc(b.code) + '</b><span class="pill st-' + b.status + '">' + esc(t("st_" + b.status)) + "</span></div>" +
@@ -933,6 +947,10 @@
       } else if (kind === "review") {
         if (!d.rating) { toast(t("rate_service"), "bad"); return; }
         await run(() => API.reviewBooking(form.dataset.id, Number(d.rating), d.comment), t("thanks_review")); loadTab(true);
+      } else if (kind === "livemap") {
+        S.form.liveZip = (d.zip || "").trim();
+        try { S.data.live = await API.adminLiveJobs(S.form.liveZip); } catch (err) { console.error(err); toast(t("error_generic"), "bad"); }
+        render();
       } else if (kind === "dir") {
         S.form.dirZip = (d.zip || "").trim(); S.form.dirSvc = d.svc || ""; loadTab();
       } else if (kind === "account") {
