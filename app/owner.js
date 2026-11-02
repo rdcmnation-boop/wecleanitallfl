@@ -175,14 +175,6 @@
       const d = S.data, es = L();
       if (!d.agents) return loading();
       const tr = (en, esTxt) => (es ? esTxt : en);
-      const reg = '<section class="card"><p class="eyebrow">' + esc(tr("Agents", "Agentes")) + '</p><table class="tbl"><thead><tr><th>' + esc(tr("Agent", "Agente")) + "</th><th>" + esc(tr("Level", "Nivel")) + "</th><th>" + esc(tr("Status", "Estado")) + "</th><th></th></tr></thead><tbody>" +
-        d.agents.map((a) => { const on = a.status === "active";
-          return "<tr><td><b>" + esc(a.agent) + '</b><br><span class="muted">' + esc(a.role_description) + "</span></td><td>" + esc(a.max_class) + "</td><td>" + esc(on ? tr("Active", "Activo") : tr("Paused", "Pausado")) + '</td><td><button class="btn ghost small" data-act="agentstatus" data-agent="' + esc(a.agent) + '" data-s="' + (on ? "paused" : "active") + '">' + esc(on ? tr("Pause", "Pausar") : tr("Activate", "Activar")) + "</button></td></tr>"; }).join("") + "</tbody></table></section>";
-      const pend = '<section class="card"><p class="eyebrow">' + esc(tr("Waiting for your approval", "Esperan tu aprobación")) + "</p>" +
-        (d.pending && d.pending.length ? d.pending.map((p) => '<article class="card"><b>' + esc(p.agent) + " → " + esc(p.action) + '</b><pre class="muted" style="white-space:pre-wrap">' + esc(JSON.stringify(p.payload || {}, null, 1)) + '</pre><input data-reason="' + esc(p.id) + '" placeholder="' + esc(tr("Reason (required to reject)", "Motivo (obligatorio para rechazar)")) + '"><div class="row"><button class="btn small" data-act="decide" data-id="' + esc(p.id) + '" data-s="approved">' + esc(tr("Approve", "Aprobar")) + '</button><button class="btn ghost small" data-act="decide" data-id="' + esc(p.id) + '" data-s="rejected">' + esc(tr("Reject", "Rechazar")) + "</button></div></article>").join("") : '<p class="muted">' + esc(tr("Nothing pending.", "Nada pendiente.")) + "</p>") + "</section>";
-      const log = '<section class="card"><p class="eyebrow">' + esc(tr("Agent activity (read-only)", "Actividad de agentes (solo lectura)")) + "</p>" +
-        (d.log && d.log.length ? '<table class="tbl"><thead><tr><th>' + esc(tr("When", "Cuándo")) + "</th><th>" + esc(tr("Agent", "Agente")) + "</th><th>" + esc(tr("Action", "Acción")) + "</th><th>" + esc(tr("Class", "Clase")) + "</th></tr></thead><tbody>" +
-          d.log.map((x) => "<tr><td>" + esc(when(x.created_at)) + "</td><td>" + esc(x.agent) + "</td><td>" + esc(x.action) + "</td><td>" + esc(x.approval_class) + "</td></tr>").join("") + "</tbody></table>" : '<p class="muted">' + esc(tr("No agent activity yet.", "Aún no hay actividad de agentes.")) + "</p>") + "</section>";
       const ans = d.answer;
       const answerHtml = (x) => {
         if (x.error) return '<p class="muted">' + esc(x.error) + "</p>";
@@ -190,19 +182,27 @@
           const state = r.ok
             ? (r.verified ? tr("Done, verified", "Hecho, verificado") : tr("Done, not verified (no evidence)", "Hecho, sin verificar (sin evidencia)")) + (Array.isArray(r.result) ? " · " + r.result.length + " " + tr("items", "elementos") : "")
             : tr("Not run: ", "No se ejecutó: ") + (r.reason === "owner_approval_required" ? tr("waiting for your approval below", "esperando tu aprobación abajo") : String(r.reason || ""));
-          return "<li><b>" + esc(r.agent + " → " + r.action) + "</b><br><span class=\"muted\">" + esc(state) + "</span></li>";
+          return '<li><b>' + esc(r.agent + " → " + r.action) + '</b><br><span class="muted">' + esc(state) + "</span></li>";
         }).join("");
         const logWarn = x.logErrors && x.logErrors.length ? '<p class="muted">' + esc(tr("Could not record " + x.logErrors.length + " entries.", "No se pudieron registrar " + x.logErrors.length + " entradas.")) + "</p>" : "";
         return (rows ? "<ul>" + rows + "</ul>" : '<p class="muted">' + esc(tr("No agent matched that request.", "Ningún agente coincidió con esa petición.")) + "</p>") + logWarn;
       };
       const composer = '<section class="card"><p class="eyebrow">' + esc(tr("Ask the agents", "Pregunta a los agentes")) + "</p>" +
         '<textarea id="agent-ask" rows="2" maxlength="500" placeholder="' + esc(tr("e.g. show unassigned bookings", "ej. muestra pedidos sin asignar")) + '"></textarea>' +
-        '<div class="row"><button class="btn small" data-act="ask">' + esc(tr("Run", "Ejecutar")) + "</button></div>" +
+        '<div class="row"><button class="btn solid small" data-act="ask">' + esc(tr("Run", "Ejecutar")) + "</button></div>" +
         (ans ? answerHtml(ans) : "") + "</section>";
+      const rowStyle = 'style="padding:12px 0;border-top:1px solid rgba(255,255,255,.08)"';
+      const reg = '<section class="card"><p class="eyebrow">' + esc(tr("Agents", "Agentes")) + "</p>" +
+        d.agents.map((a) => { const on = a.status === "active";
+          return "<div " + rowStyle + '><div class="row between"><b>' + esc(a.agent) + '</b><span class="pill">' + esc(a.max_class) + " · " + esc(on ? tr("Active", "Activo") : tr("Paused", "Pausado")) + '</span></div><p class="muted" style="margin:6px 0 10px">' + esc(a.role_description) + '</p><button class="btn ghost small" data-act="agentstatus" data-agent="' + esc(a.agent) + '" data-s="' + (on ? "paused" : "active") + '">' + esc(on ? tr("Pause", "Pausar") : tr("Activate", "Activar")) + "</button></div>"; }).join("") + "</section>";
+      const pend = '<section class="card"><p class="eyebrow">' + esc(tr("Waiting for your approval", "Esperan tu aprobación")) + "</p>" +
+        (d.pending && d.pending.length ? d.pending.map((p) => '<div ' + rowStyle + '><b>' + esc(p.agent) + " → " + esc(p.action) + '</b><pre class="muted" style="white-space:pre-wrap;font-size:12px">' + esc(JSON.stringify(p.payload || {}, null, 1)) + '</pre><input data-reason="' + esc(p.id) + '" placeholder="' + esc(tr("Reason (required to reject)", "Motivo (obligatorio para rechazar)")) + '"><div class="row" style="margin-top:8px"><button class="btn solid small" data-act="decide" data-id="' + esc(p.id) + '" data-s="approved">' + esc(tr("Approve", "Aprobar")) + '</button><button class="btn ghost small" data-act="decide" data-id="' + esc(p.id) + '" data-s="rejected">' + esc(tr("Reject", "Rechazar")) + "</button></div></div>").join("") : '<p class="muted">' + esc(tr("Nothing pending.", "Nada pendiente.")) + "</p>") + "</section>";
+      const log = '<section class="card"><p class="eyebrow">' + esc(tr("Agent activity (read-only)", "Actividad de agentes (solo lectura)")) + "</p>" +
+        (d.log && d.log.length ? d.log.map((x) => '<div ' + rowStyle + '>' + esc(x.agent + " → " + x.action) + '<br><span class="muted">' + esc(when(x.created_at)) + " · " + esc(x.approval_class) + "</span></div>").join("") : '<p class="muted">' + esc(tr("No agent activity yet.", "Aún no hay actividad de agentes.")) + "</p>") + "</section>";
       return composer + reg + pend + log;
     }
 
-    const SYS = [["architecture", "grid"], ["improve", "spark"], ["agents", "spark"], ["updates", "bell"], ["customers", "users"], ["connectors", "plug"], ["account", "user"]];
+    const SYS = [["architecture", "grid"], ["improve", "spark"], ["agents", "list"], ["updates", "bell"], ["customers", "users"], ["connectors", "plug"], ["account", "user"]];
     function vSystem(views) {
       const cur = S.sys || "architecture", es = L();
       const names = { architecture: es ? "Arquitectura" : "Architecture", improve: es ? "Mejoras" : "Improvements", agents: es ? "Agentes" : "Agents", updates: es ? "Actualizaciones" : "Updates", customers: es ? "Clientes" : "Customers", connectors: t("tab_connectors"), account: t("tab_account") };

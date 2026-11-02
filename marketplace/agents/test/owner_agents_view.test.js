@@ -43,7 +43,7 @@ test('answer with an error is shown escaped', () => {
 test('hostile agent text in results is escaped', () => {
   const html = render({ ...base, answer: { results: [{ agent: '<script>', action: '"><b>', ok: false, reason: '<i>' }] } });
   assert.ok(!html.includes('<script>'));
-  assert.ok(!html.includes('"><b>'));
+  assert.ok(html.includes('&quot;&gt;&lt;b&gt;'), 'hostile action should appear escaped');
 });
 
 test('no answer means no answer block', () => {
