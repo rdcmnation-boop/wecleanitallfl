@@ -10,7 +10,10 @@ const NEARBY = [
   { n: "Cleaning Depot Supply", a: "10412 W McNab Rd, Tamarac, FL 33321", tel: "+19545616352", map: "https://www.google.com/maps/search/?api=1&query=Cleaning+Depot+Supply+Tamarac+FL&query_place_id=ChIJO3NeJ1EG2YgRcSW5KjWU228" },
   { n: "A Cleaning Supplies and Rentals", a: "1660 E Oakland Park Blvd, Oakland Park, FL 33334", tel: "+19545303551", map: "https://www.google.com/maps/search/?api=1&query=A+Cleaning+Supplies+and+Rentals+Oakland+Park+FL&query_place_id=ChIJZ_iZE4wB2YgRYqiLKW68hOg" },
   { n: "Everlast Cleaning Equipment & Supplies", a: "6881 NW 16th Terrace, Fort Lauderdale, FL 33309", tel: "+18003995901", map: "https://www.google.com/maps/search/?api=1&query=Everlast+Cleaning+Equipment+Fort+Lauderdale+FL&query_place_id=ChIJS7BwP70G2YgRDCSJ67v9Ztk" },
-  { n: "Rex Rentals", a: "1921 S State Rd 7, Davie, FL 33317", tel: "+19545841800", map: "https://www.google.com/maps/search/?api=1&query=Rex+Rentals+Davie+FL&query_place_id=ChIJo-SAKFsH2YgRiQjjwkMj_NE" }
+  { n: "Rex Rentals", a: "1921 S State Rd 7, Davie, FL 33317", tel: "+19545841800", map: "https://www.google.com/maps/search/?api=1&query=Rex+Rentals+Davie+FL&query_place_id=ChIJo-SAKFsH2YgRiQjjwkMj_NE" },
+  { n: "Rental Center at The Home Depot", a: "12525 W Sunrise Blvd, Sunrise, FL 33323", tel: "+19548375508", map: "https://www.google.com/maps/search/?api=1&query=Home+Depot+Rental+Center+12525+W+Sunrise+Blvd+Sunrise+FL&query_place_id=ChIJHdTviPwI2YgR1x-SqPjNSng" },
+  { n: "Veseris", a: "6600 NW 16th St #7, Plantation, FL 33313", tel: "+19545858753", map: "https://www.google.com/maps/search/?api=1&query=Veseris+Plantation+FL&query_place_id=ChIJ53VYzVAG2YgRRKhXlP7bO-k" },
+  { n: "Sunbelt Rentals (aerial lifts)", a: "6580 W State Rd 84, Davie, FL 33317", tel: "+19547537556", map: "https://www.google.com/maps/search/?api=1&query=Sunbelt+Rentals+Davie+FL&query_place_id=ChIJ7yjnxDsH2YgRm6cDPuTQNok" }
 ];
 window.WCIA_LEARN = {
   es: {
