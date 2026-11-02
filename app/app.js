@@ -200,7 +200,7 @@
         if (sys === "improve") { const [stats, an, workers] = await Promise.all([API.adminStats(), API.adminAnalytics(30), API.adminWorkers()]); return { stats, an, workers }; }
         if (sys === "updates") return { activity: await API.adminActivity() };
         if (sys === "customers") return { customers: await API.adminCustomers() };
-        if (sys === "agents") { const [agents, pending, log] = await Promise.all([API.adminAgents(), API.adminPendingApprovals(), API.adminAgentLog(50)]); return { agents, pending, log }; }
+        if (sys === "agents") { const [agents, pending, log, ov] = await Promise.all([API.adminAgents(), API.adminPendingApprovals(), API.adminAgentLog(50), API.adminAgentOverview().catch(() => null)]); return { agents, pending, log, ov }; }
         if (sys === "connectors") return { stats: await API.adminStats() };
         if (sys === "account") return { dev: S.me && S.me.isAdmin ? await API.deviceStatus().catch(() => null) : null };
         return {};
@@ -263,7 +263,7 @@
         "</div>" +
         // Three doors, so nobody signs in to the wrong side: client, cleaner, owner.
         '<div class="doors"><p class="label center">' + esc(t("have_account")) + " · " + esc(t("sign_in_as")) + '</p><div class="door-row">' +
-        [["customer", "home"], ["worker", "broom"], ["admin", "shield"]].map(([r, ic]) => '<button class="door d-' + r + '" data-act="signin" data-as="' + r + '">' + icon(ic) + "<span>" + esc(t("role_" + r)) + "</span></button>").join("") + "</div></div>" +
+        [["customer", "home"], ["worker", "broom"], ["admin", "shield"]].map(([r, ic]) => '<button class="door d-' + r + '" data-act="signin" data-as="' + r + '">' + icon(ic) + "<span>" + esc(t("door_" + r)) + "</span><small>" + esc(t("door_" + r + "_sub")) + "</small></button>").join("") + "</div></div>" +
         '<a class="link-btn center" href="/comercial/">' + esc(t("comm_eyebrow")) + "</a>" +
         (API.mode === "demo" ?'<div class="demo-try"><span>' + esc(t("demo_try")) + ':</span><button class="pill" data-act="demo" data-kind="customer">' + esc(t("demo_customer")) +
           '</button><button class="pill" data-act="demo" data-kind="worker">' + esc(t("demo_worker")) + '</button><button class="pill" data-act="demo" data-kind="owner">' + esc(t("demo_owner")) + "</button></div>" : "");
@@ -284,6 +284,7 @@
       body = '<button class="back" data-act="home">‹ ' + esc(t("back")) + "</button>" +
         (as ? '<p class="role-chip r-' + as + '">' + icon({ customer: "home", worker: "broom", admin: "shield" }[as]) + esc(t("role_" + as)) + "</p>" : "") +
         "<h2>" + esc(as ? t("sign_in_role", { r: t("role_" + as) }) : t("sign_in")) + "</h2>" +
+        (as === "admin" ? '<p class="fine">' + icon("shield") + " " + esc(t("owner_signin_note")) + "</p>" : "") +
         '<form class="card form" data-form="signin" novalidate>' +
         field("email", t("email"), "email", 'required autocomplete="email" autofocus') +
         field("password", t("password"), "password", 'required autocomplete="current-password"') +
@@ -1233,6 +1234,16 @@
     else if (a === "wfilter") { S.filter = el.dataset.f; render(); }
     else if (a === "range") { S.range = Number(el.dataset.d); S.data.an = null; render(); loadTab(true); }
     else if (a === "sys") { S.tab = "system"; S.sys = el.dataset.s || "architecture"; store.set("wcia_tab_" + role(), "system"); S.data = {}; loadTab(); }
+    // Agents: alerts and the owner's decisions (cap, what sends alone, messaging on/off)
+    else if (a === "task") { await run(() => API.adminCloseTask(Number(id), el.dataset.s), t("saved")).catch(() => {}); loadTab(true); }
+    else if (a === "agset" || a === "agcap" || a === "agmsg") {
+      const st = (S.data.ov && S.data.ov.settings) || {};
+      let cap = null, auto = null, msg = null;
+      if (a === "agset") { const k = el.dataset.k, cur = st.auto_send || []; auto = cur.includes(k) ? cur.filter((x) => x !== k) : cur.concat(k); }
+      if (a === "agcap") { const v = window.prompt(lang === "es" ? "Tope mensual de IA en dólares (0 = IA apagada)" : "Monthly AI cap in dollars (0 = AI off)", String(st.ai_monthly_cap_usd ?? 10)); if (v == null) return; cap = Math.max(0, Math.min(1000, Number(String(v).replace(/[^\d.]/g, "")) || 0)); }
+      if (a === "agmsg") msg = !st.messaging_on;
+      await run(() => API.adminSaveAgentSettings(cap, auto, null, msg), t("saved")).catch(() => {}); loadTab(true);
+    }
     else if (a === "agentstatus") { await run(() => API.adminSetAgentStatus(el.dataset.agent, el.dataset.s), t("saved")).catch(() => {}); loadTab(true); }
     else if (a === "decide") {
       const reason = (root.querySelector('[data-reason="' + id + '"]') || {}).value || "";

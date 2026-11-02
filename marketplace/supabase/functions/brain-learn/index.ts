@@ -2,9 +2,11 @@
 // drafts up to 5 general notes with Claude, and saves the ones that pass the safety filter as "active" (autopilot).
 // Notes that mention prices, guarantees, policies, contact details or attempts to change the assistant's rules are
 // dropped. The owner can set any note to "rejected" in brain_notes to remove it. Called nightly by pg_cron (brain_learning_cron.sql).
-// Secrets: ANTHROPIC_API_KEY, ANTHROPIC_MODEL (optional). SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are provided by Supabase.
+// Secrets: ANTHROPIC_API_KEY, ANTHROPIC_MODEL (optional). AI goes through ./ai.ts (monthly cap, cost recorded). SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are provided by Supabase.
 // The x-learn-secret header is checked by the database (check_learn_secret), whose shared value lives in Vault.
 // This function never stores or sees that value. Deploy with verify_jwt off: the header check guards it.
+
+import { claude } from "./ai.ts";
 
 const env = (k: string, d = "") => Deno.env.get(k) ?? d;
 const json = (o: unknown, status = 200) =>
@@ -27,8 +29,7 @@ Deno.serve(async (req) => {
 
   const base = env("SUPABASE_URL").replace(/\/$/, "");
   const key = env("SUPABASE_SERVICE_ROLE_KEY");
-  const anthropicKey = env("ANTHROPIC_API_KEY");
-  if (!key || !anthropicKey) return json({ error: "config" }, 500);
+  if (!key || !env("ANTHROPIC_API_KEY")) return json({ error: "config" }, 500);
   const H = { apikey: key, Authorization: "Bearer " + key, "Content-Type": "application/json" };
 
   // Only the nightly job knows the shared value; the database compares it with the one in Vault.
@@ -53,26 +54,18 @@ Deno.serve(async (req) => {
   const known = await fetch(base + "/rest/v1/brain_notes?select=topic&status=in.(active,pending)&limit=200", { headers: H });
   const topics: string[] = known.ok ? (await known.json()).map((n: { topic: string }) => n.topic) : [];
 
-  const r = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: { "x-api-key": anthropicKey, "anthropic-version": "2023-06-01", "content-type": "application/json" },
-    body: JSON.stringify({
-      model: env("ANTHROPIC_MODEL", "claude-haiku-4-5"),
-      max_tokens: 900,
-      system: RULES + "\n\nTemas ya existentes (no repetir): " + JSON.stringify(topics).slice(0, 3000),
-      messages: [{
-        role: "user",
-        content: "Preguntas:\n" + rows.map((x) => "- (" + x.role + ") " + x.question).join("\n").slice(0, 12000),
-      }],
-    }),
+  // Through ./ai.ts: the $10 monthly cap is checked first and the cost is recorded after.
+  const out = await claude({
+    feature: "brain_learn",
+    maxTokens: 900,
+    system: RULES + "\n\nTemas ya existentes (no repetir): " + JSON.stringify(topics).slice(0, 3000),
+    messages: [{ role: "user", content: "Preguntas:\n" + rows.map((x) => "- (" + x.role + ") " + x.question).join("\n").slice(0, 12000) }],
   });
-  if (!r.ok) {
-    console.error("brain-learn: anthropic status", r.status, (await r.text()).slice(0, 300));
-    return json({ error: "anthropic" }, 502);
+  if (!out.ok) {
+    if (out.reason === "error") console.error("brain-learn: anthropic", out.detail);
+    return json({ error: out.reason }, out.reason === "error" ? 502 : 200);
   }
-  const j = await r.json();
-  const text: string = (j.content || []).filter((c: { type: string }) => c.type === "text")
-    .map((c: { text: string }) => c.text).join("");
+  const text: string = out.text;
 
   let drafts: unknown[] = [];
   try {

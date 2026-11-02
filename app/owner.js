@@ -218,7 +218,35 @@
         (d.pending && d.pending.length ? d.pending.map((p) => '<div ' + rowStyle + '><b>' + esc(p.agent) + " → " + esc(p.action) + '</b><pre class="muted" style="white-space:pre-wrap;font-size:12px">' + esc(JSON.stringify(p.payload || {}, null, 1)) + '</pre><input data-reason="' + esc(p.id) + '" placeholder="' + esc(tr("Reason (required to reject)", "Motivo (obligatorio para rechazar)")) + '"><div class="row" style="margin-top:8px"><button class="btn solid small" data-act="decide" data-id="' + esc(p.id) + '" data-s="approved">' + esc(tr("Approve", "Aprobar")) + '</button><button class="btn ghost small" data-act="decide" data-id="' + esc(p.id) + '" data-s="rejected">' + esc(tr("Reject", "Rechazar")) + "</button></div></div>").join("") : '<p class="muted">' + esc(tr("Nothing pending.", "Nada pendiente.")) + "</p>") + "</section>";
       const log = '<section class="card"><p class="eyebrow">' + esc(tr("Agent activity (read-only)", "Actividad de agentes (solo lectura)")) + "</p>" +
         (d.log && d.log.length ? d.log.map((x) => '<div ' + rowStyle + '>' + esc(x.agent + " → " + x.action) + '<br><span class="muted">' + esc(when(x.created_at)) + " · " + esc(x.approval_class) + "</span></div>").join("") : '<p class="muted">' + esc(tr("No agent activity yet.", "Aún no hay actividad de agentes.")) + "</p>") + "</section>";
-      return composer + reg + pend + log;
+      return agentsOverview(d.ov) + composer + reg + pend + log;
+    }
+
+    // Phase 2: the owner's 4 decisions in force, the 3-step rollout and what the agents found.
+    function agentsOverview(ov) {
+      if (!ov) return "";
+      const es = L(), tr = (en, esTxt) => (es ? esTxt : en);
+      const s = ov.settings || {}, b = ov.budget || {}, auto = s.auto_send || [];
+      const cap = Number(b.cap || 0), spent = Number(b.spent || 0), pct = cap ? Math.min(100, Math.round((spent / cap) * 100)) : 100;
+      const sw = (on, act, k) => '<button class="mini-switch' + (on ? " on" : "") + '" data-act="' + act + '"' + (k ? ' data-k="' + k + '"' : "") + ' role="switch" aria-checked="' + on + '"><i></i></button>';
+      const dt = (iso) => new Date(iso).toLocaleDateString(es ? "es-US" : "en-US", { weekday: "short", month: "short", day: "numeric" });
+      const decisions = '<section class="card ag-dec"><p class="eyebrow">' + icon("shield") + esc(tr("Your decisions", "Tus decisiones")) + "</p>" +
+        '<div class="ag-row"><div><b>' + esc(tr("Routine notices send alone", "Avisos de rutina salen solos")) + '</b><small>' + esc(tr("Job offers, order updates, reminders", "Ofertas de trabajo, cambios de pedido, recordatorios")) + "</small></div>" + sw(auto.includes("routine"), "agset", "routine") + "</div>" +
+        '<div class="ag-row"><div><b>' + esc(tr("Support answers send alone", "Respuestas de soporte salen solas")) + '</b><small>' + esc(tr("AI answers to clients and cleaners", "Respuestas de IA a clientes y limpiadores")) + "</small></div>" + sw(auto.includes("support"), "agset", "support") + "</div>" +
+        '<p class="fine">' + esc(tr("Campaigns and anything about money always wait for you.", "Campañas y todo lo de dinero siempre esperan por ti.")) + "</p>" +
+        '<div class="ag-row"><div><b>' + esc(tr("AI: Claude Haiku 5.5", "IA: Claude Haiku 5.5")) + '</b><small>' + esc("$" + spent.toFixed(2) + " " + tr("of", "de") + " $" + cap.toFixed(0) + " " + tr("this month", "este mes") + " · " + (b.calls || 0) + " " + tr("answers", "respuestas")) + "</small></div>" +
+        '<button class="btn ghost small" data-act="agcap">' + esc(tr("Change cap", "Cambiar tope")) + "</button></div>" +
+        '<div class="goal-bar"><i style="width:' + pct + '%"></i></div>' +
+        '<p class="fine">' + esc(tr("Free until you add a Claude key. At the cap, the app switches to its free built-in replies.", "Gratis hasta que agregues una clave de Claude. Al llegar al tope, la app usa sus respuestas propias gratis.")) + "</p>" +
+        '<div class="ag-row"><div><b>' + esc(tr("WhatsApp / SMS messages", "Mensajes de WhatsApp / SMS")) + '</b><small>' + esc(s.messaging_on ? tr("On: queued messages go out every minute", "Encendido: los mensajes en cola salen cada minuto") : tr("Off until Twilio is set up; messages wait in the queue", "Apagado hasta configurar Twilio; los mensajes esperan en cola")) + "</small></div>" + sw(!!s.messaging_on, "agmsg") + "</div>" +
+        '<div class="ag-row"><div><b>' + esc(tr("Records kept", "Registros guardados")) + '</b><small>' + esc(tr("Audit and agent logs ", "Auditoría y agentes ") + Math.round((s.audit_retention_days || 365) / 365) + tr(" year · chats ", " año · chats ") + (s.chat_retention_days || 90) + tr(" days", " días")) + "</small></div></div></section>";
+      const steps = '<section class="card"><p class="eyebrow">' + icon("calendar") + esc(tr("Agents go live in 3 steps", "Agentes en 3 etapas")) + "</p>" +
+        (ov.steps || []).map((x) => '<div class="ag-step' + (x.live ? " live" : "") + '"><span class="ag-num">' + x.step + "</span><div><b>" + esc(x.live ? tr("Live now", "En vivo") : tr("Starts ", "Empieza ") + dt(x.at)) + "</b><small>" + esc((x.agents || []).join(" · ")) + "</small></div></div>").join("") +
+        '<p class="fine">' + esc(tr("Pausing an agent below always wins. Agents never move money, change prices, approve cleaners or assign jobs.", "Pausar un agente abajo siempre manda. Los agentes nunca mueven dinero, cambian precios, aprueban limpiadores ni asignan trabajos.")) + "</p></section>";
+      const open = (ov.tasks || []).filter((x) => x.status === "open");
+      const tasks = '<section class="card"><p class="eyebrow">' + icon("bell") + esc(tr("What the agents found", "Lo que encontraron los agentes")) + " · " + open.length + "</p>" +
+        (open.length ? open.map((x) => '<div class="ag-task"><div><small>' + esc(x.agent) + " · " + esc(when(x.created_at)) + "</small><p>" + esc(x.title) + '</p></div><div class="row gap"><button class="btn solid small" data-act="task" data-id="' + esc(x.id) + '" data-s="done">' + esc(tr("Done", "Hecho")) + '</button><button class="btn ghost small" data-act="task" data-id="' + esc(x.id) + '" data-s="dismissed">' + esc(tr("Dismiss", "Descartar")) + "</button></div></div>").join("")
+          : '<p class="muted">' + esc(tr("Nothing needs you right now. Checks run every 5 minutes.", "Nada te necesita ahora. Revisan cada 5 minutos.")) + "</p>") + "</section>";
+      return decisions + steps + tasks;
     }
 
     // Launch checklist: what already works (checked) and what is still missing, with direct links.

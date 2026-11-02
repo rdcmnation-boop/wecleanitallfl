@@ -781,3 +781,18 @@ body.cleaner .dash{position:relative;min-height:100vh;min-height:100dvh}
 @media (max-width:560px){.top.in .hdr-time{display:none}}
 .top.in{gap:8px}
 .top.in .brand{flex:1}
+.door small{font:400 11px/1.25 var(--body);color:var(--muted);text-align:center}
+.door{padding:14px 6px 12px}
+.fine .ic{width:14px;height:14px;vertical-align:-2px}
+.door.d-admin small{color:var(--gold)}
+/* owner: agents phase 2 */
+.ag-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-top:1px solid var(--line-2)}
+.ag-row>div{display:flex;flex-direction:column;gap:2px} .ag-row b{font:700 15px var(--display)} .ag-row small{color:var(--muted);font-size:13px}
+.mini-switch{flex:none;width:52px;height:30px;border-radius:15px;border:1px solid var(--line);background:rgba(255,255,255,.08);position:relative;cursor:pointer}
+.mini-switch i{position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#cfd6d1;transition:transform .18s}
+.mini-switch.on{background:var(--lime)} .mini-switch.on i{transform:translateX(22px);background:var(--leaf)}
+.ag-step{display:flex;gap:12px;align-items:flex-start;padding:10px 0;border-top:1px solid var(--line-2);opacity:.75}
+.ag-step.live{opacity:1} .ag-step>div{display:flex;flex-direction:column} .ag-step small{color:var(--muted)}
+.ag-num{flex:none;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font:800 14px var(--display);background:rgba(255,255,255,.08)}
+.ag-step.live .ag-num{background:var(--lime);color:var(--leaf);box-shadow:0 0 12px rgba(162,234,79,.5)}
+.ag-task{display:flex;flex-direction:column;gap:8px;padding:12px 0;border-top:1px solid var(--line-2)} .ag-task small{color:var(--faint)}

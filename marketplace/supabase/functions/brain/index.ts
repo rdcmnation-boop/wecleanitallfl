@@ -1,10 +1,13 @@
 // Brain: one central assistant with three roles (customer, worker, owner).
-// Secrets: ANTHROPIC_API_KEY (needed for AI replies), ANTHROPIC_MODEL (optional, default claude-haiku-4-5, same model as ai-ceo).
+// Secrets: ANTHROPIC_API_KEY (needed for AI replies), ANTHROPIC_MODEL (optional; default comes from agent_settings: claude-haiku-5-5).
+// AI calls go through ./ai.ts: monthly cap checked first, cost recorded after.
 // Without the key it answers { mode: "off" } and the app shows its built-in replies instead.
 // The caller must be signed in. A worker must really be a worker; the owner role needs is_admin().
 // The app sends only the context it is allowed to show that user (no other people's addresses or phones).
 // Learning: owner-approved notes (brain_notes, status "active") are added to the prompt, and customer and worker
 // questions are logged without contact details (brain_questions). brain-learn turns those into pending notes.
+
+import { agentLive, claude } from "./ai.ts";
 
 const env = (k: string, d = "") => Deno.env.get(k) ?? d;
 
@@ -127,39 +130,24 @@ Deno.serve(async (req) => {
     if (!rows[0] || rows[0].role !== "worker") return json({ error: "forbidden" }, 403);
   }
 
-  const key = env("ANTHROPIC_API_KEY");
-  if (!key) { await logQuestion(base, role, message, false); return json({ mode: "off" }); }
+  // Owner decisions: customers and cleaners get AI answers only once the support agent is live (rollout step 2),
+  // and every AI call goes through the $10 monthly cap. Otherwise the app shows its free built-in replies.
+  if (role !== "owner" && !(await agentLive("support"))) { await logQuestion(base, role, message, false); return json({ mode: "off" }); }
   if (role !== "owner" && await overHourlyCap(base)) return json({ mode: "limit" }, 429);
 
   const ctx = JSON.stringify(body.context ?? {}).slice(0, 4000);
   const notes = await activeNotes(base, role);
-  let r: Response;
-  try {
-    r = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: { "x-api-key": key, "anthropic-version": "2023-06-01", "content-type": "application/json" },
-      body: JSON.stringify({
-        model: env("ANTHROPIC_MODEL", "claude-haiku-4-5"),
-        max_tokens: 700,
-        system: PROMPTS[role] + "\n\n" + CLEANING + (notes ? "\n\nNOTAS APRENDIDAS (aprobadas por el dueño; úsalas si aplican):\n" + notes : "") + "\n\nDatos disponibles (JSON): " + ctx,
-        messages: [{ role: "user", content: message }],
-      }),
-    });
-  } catch (e) {
-    console.error("brain: anthropic fetch failed", String(e));
+  const out = await claude({
+    feature: "brain_" + role,
+    maxTokens: 700,
+    system: PROMPTS[role] + "\n\n" + CLEANING + (notes ? "\n\nNOTAS APRENDIDAS (aprobadas por el dueño; úsalas si aplican):\n" + notes : "") + "\n\nDatos disponibles (JSON): " + ctx,
+    messages: [{ role: "user", content: message }],
+  });
+  if (!out.ok) {
     await logQuestion(base, role, message, false);
-    return json({ mode: "error" }, 502);
+    if (out.reason === "error") { console.error("brain: anthropic", out.detail); return json({ mode: "error" }, 502); }
+    return json({ mode: "off" }); // no key, or the monthly cap is reached
   }
-  if (!r.ok) {
-    // Log the reason (never the key) so it can be read in the function logs.
-    const detail = (await r.text()).slice(0, 300);
-    console.error("brain: anthropic status", r.status, detail);
-    await logQuestion(base, role, message, false);
-    return json({ mode: "error" }, 502);
-  }
-  const j = await r.json();
-  const text = (j.content || []).filter((c: { type: string }) => c.type === "text")
-    .map((c: { text: string }) => c.text).join("\n").trim();
-  await logQuestion(base, role, message, Boolean(text));
-  return json({ mode: "ai", reply: text || null });
+  await logQuestion(base, role, message, Boolean(out.text));
+  return json({ mode: "ai", reply: out.text || null });
 });
