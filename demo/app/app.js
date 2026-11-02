@@ -201,7 +201,7 @@
   function header(extra) {
     return '<header class="top"><a class="brand" href="/" aria-label="We Clean It All">' +
       '<img src="/media/mark.svg" alt="" width="40" height="40"><span class="wm">We Clean<b>It All</b></span></a>' +
-      '<div class="top-actions"><span class="hdr-clock" data-clock aria-label="' + esc(t("clock_label")) + '">' + esc(clockText()) + "</span>" + (extra || "") +
+      '<div class="top-actions"><span class="hdr-time"><span class="hdr-clock" data-clock aria-label="' + esc(t("clock_label")) + '">' + esc(clockText()) + '</span><small class="hdr-date" data-hdr-date>' + esc(headerDate()) + "</small></span>" + (extra || "") +
       '<button class="chip-btn" data-act="lang" aria-label="' + t("language") + '">' + (lang === "es" ? "EN" : "ES") + "</button></div></header>";
   }
   function demoBanner() {
@@ -336,6 +336,7 @@
   const jobTimer = (b) => b.status === "in_progress" && b.started_at ? '<p class="job-timer' + (b.paused_at ? " paused" : "") + '" data-started="' + esc(b.started_at) + '" data-paused-seconds="' + Number(b.paused_seconds || 0) + '"' + (b.paused_at ? ' data-paused-at="' + esc(b.paused_at) + '"' : "") + ">" + icon("clock") + "<span>" + esc(t("timer_label")) + ' <b class="tval">--:--</b>' + (b.paused_at ? ' <small class="paused-tag">' + esc(t("timer_paused")) + "</small>" : "") + "</span></p>" : "";
   // Live local time and date (like a ride-app header), and the next booked visit. Clock ticks with the timers.
   const clockText = () => new Date().toLocaleTimeString(lang === "en" ? "en-US" : "es-US", { hour: "numeric", minute: "2-digit", second: "2-digit" });
+  const headerDate = () => new Date().toLocaleDateString(lang === "en" ? "en-US" : "es-US", { weekday: "short", month: "short", day: "numeric" });
   function dateStrip() {
     const now = new Date();
     const day = now.toLocaleDateString(lang === "en" ? "en-US" : "es-US", { weekday: "long", month: "long", day: "numeric" });
@@ -360,6 +361,8 @@
     });
     const nowText = clockText();
     document.querySelectorAll("[data-clock]").forEach((el) => { if (el.textContent !== nowText) el.textContent = nowText; });
+    const dayText = headerDate();
+    document.querySelectorAll("[data-hdr-date]").forEach((el) => { if (el.textContent !== dayText) el.textContent = dayText; });
   };
   const tickLoc = () => document.querySelectorAll("[data-since]").forEach((el) => {
     const m = Math.floor((Date.now() - Date.parse(el.dataset.since)) / 60000);
