@@ -201,7 +201,7 @@
   function header(extra) {
     return '<header class="top"><a class="brand" href="/" aria-label="We Clean It All">' +
       '<img src="/media/mark.svg" alt="" width="40" height="40"><span class="wm">We Clean<b>It All</b></span></a>' +
-      '<div class="top-actions">' + (extra || "") +
+      '<div class="top-actions"><span class="hdr-clock" data-clock aria-label="' + esc(t("clock_label")) + '">' + esc(clockText()) + "</span>" + (extra || "") +
       '<button class="chip-btn" data-act="lang" aria-label="' + t("language") + '">' + (lang === "es" ? "EN" : "ES") + "</button></div></header>";
   }
   function demoBanner() {
