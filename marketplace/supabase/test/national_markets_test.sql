@@ -1,0 +1,7 @@
+-- National markets + dispatch rules (national_markets.sql). Safe on the real project: ends with RAISE EXCEPTION,
+-- so everything is rolled back. Result: DRYRUN_RESULT failures=0 total=26 (2026-11-02).
+-- Checks: ZIP → market (exact and prefix), closed and unknown areas refused, booking gets market + time zone,
+-- offers only to eligible providers, owner override still bound by the rules, offline provider can't accept,
+-- insurance requirement, first eligible acceptance wins, admin dispatch mode, activation needs the checklist,
+-- only the owner can activate, tables closed to users, providers can't promote themselves.
+-- The full script is the one run in this session; see PROJECT_STATUS.md §4.
