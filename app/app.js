@@ -424,6 +424,7 @@
       '<div class="card"><p class="label">' + esc(t("frequency")) + "</p>" + chips("frequency", ["once", "weekly", "biweekly", "monthly"].concat(f.segment === "commercial" ? ["daily"] : []).map((x) => [x, t("freq_" + x)]), [f.frequency]) + "</div>" +
       secC + secO("where", t("sec_where")) + '<div class="card"><div class="row2">' + field("zip", t("zip"), "text", 'required inputmode="numeric" pattern="[0-9]{5}" maxlength="5" autocomplete="postal-code"', null, f.zip || "") +
       field("city", t("city"), "text", 'maxlength="80" autocomplete="address-level2"', null, f.city || "") + "</div>" +
+      '<div class="zip-map" id="zipMap">' + zipMapHtml(f.zip) + "</div>" +
       field("address", t("address"), "text", 'maxlength="200" autocomplete="street-address"', t("address_private"), f.address || "") + "</div>" +
       secC + secO("when", t("sec_when")) + '<div class="card"><p class="label">' + esc(t("when")) + "</p>" + seg("urgency", [["scheduled", t("pick_date")], ["asap", t("asap")]], f.urgency) +
       (f.urgency === "scheduled" ? field("scheduled_at", t("date_time"), "datetime-local", 'min="' + localMin + '" required', null, f.scheduled_at || "") : "") + "</div>" +
@@ -911,11 +912,19 @@
     }
   });
   root.addEventListener("input", (e) => { const el = e.target; if (el.form && el.form.dataset.form === "book") syncBook(el.form); });
+  // Google Maps link for the ZIP area only (never the street address). Shown as soon as 5 digits are typed.
+  function zipMapHtml(z) {
+    return /^\d{5}$/.test(String(z || ""))
+      ? '<a class="btn ghost small" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(z + " FL") + '">' + esc(t("zip_on_map")) + "</a>"
+      : "";
+  }
   function syncBook(form) {
     const d = formData(form);
     const f = S.form.book;
     ["segment", "service", "frequency", "zip", "city", "address", "urgency", "scheduled_at", "notes", "property_type"].forEach((k) => { if (d[k] !== undefined) f[k] = d[k]; });
     ["bedrooms", "bathrooms", "sqft", "hours_est", "budget"].forEach((k) => { if (d[k] !== undefined) f[k] = d[k] === "" ? "" : Number(d[k]); });
+    const zm = document.getElementById("zipMap");
+    if (zm) zm.innerHTML = zipMapHtml(f.zip);
   }
 
   root.addEventListener("submit", async (e) => {
