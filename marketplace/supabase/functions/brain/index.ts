@@ -59,17 +59,28 @@ Deno.serve(async (req) => {
   if (!key) return json({ mode: "off" });
 
   const ctx = JSON.stringify(body.context ?? {}).slice(0, 4000);
-  const r = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: { "x-api-key": key, "anthropic-version": "2023-06-01", "content-type": "application/json" },
-    body: JSON.stringify({
-      model: env("ANTHROPIC_MODEL", "claude-haiku-5-5"),
-      max_tokens: 400,
-      system: PROMPTS[role] + "\n\nDatos disponibles (JSON): " + ctx,
-      messages: [{ role: "user", content: message }],
-    }),
-  });
-  if (!r.ok) return json({ mode: "error" }, 502);
+  let r: Response;
+  try {
+    r = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "x-api-key": key, "anthropic-version": "2023-06-01", "content-type": "application/json" },
+      body: JSON.stringify({
+        model: env("ANTHROPIC_MODEL", "claude-haiku-5-5"),
+        max_tokens: 400,
+        system: PROMPTS[role] + "\n\nDatos disponibles (JSON): " + ctx,
+        messages: [{ role: "user", content: message }],
+      }),
+    });
+  } catch (e) {
+    console.error("brain: anthropic fetch failed", String(e));
+    return json({ mode: "error" }, 502);
+  }
+  if (!r.ok) {
+    // Log the reason (never the key) so it can be read in the function logs.
+    const detail = (await r.text()).slice(0, 300);
+    console.error("brain: anthropic status", r.status, detail);
+    return json({ mode: "error" }, 502);
+  }
   const j = await r.json();
   const text = (j.content || []).filter((c: { type: string }) => c.type === "text")
     .map((c: { text: string }) => c.text).join("\n").trim();
