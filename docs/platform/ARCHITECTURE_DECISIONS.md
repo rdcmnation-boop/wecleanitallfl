@@ -4,6 +4,14 @@ Status key: **Accepted** = already true in the live system · **Proposed** = nee
 
 ---
 
+## ADR-00 · Modular monolith + background workers (no microservices yet) — Accepted
+**Why:** clear module boundaries (SYSTEM_BOUNDARIES.md) inside one database and one app, plus a few background workers (pg_cron jobs and edge functions for outside services), give the separation we need without the cost and operational load of many services.
+**Alternatives:** microservices per domain (separate deploys, networks, data copies, distributed failures; not justified at current scale).
+**When to split:** only when a measured need appears (a module's load, release cadence or compliance boundary differs enough), e.g. robotics telemetry at fleet scale or payments isolation. Splitting follows the existing boundaries, so no redesign.
+**Cost:** lowest. **Security:** fewer network surfaces. **Rollback:** n/a (current state).
+
+---
+
 ## ADR-01 · Business rules live in Postgres; apps stay thin — Accepted
 **Why:** one source of truth for booking, dispatch, pricing, money and permissions. Any client (PWA, iOS, Android, AI agent, partner API) calls the same functions, so rules can't drift between platforms and no client can skip them.
 **Alternatives:** a Node/Next.js API layer holding the rules (more code to host and keep in sync; second place to secure); rules in the app (insecure).
