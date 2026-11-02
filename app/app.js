@@ -352,6 +352,7 @@
     const m = Math.floor((Date.now() - Date.parse(el.dataset.since)) / 60000);
     const v = m < 1 ? t("loc_now") : t("loc_ago", { n: m }); if (el.textContent !== v) el.textContent = v;
   });
+  document.addEventListener("toggle", (e) => { const d = e.target; if (d && d.matches && d.matches("details.sec[data-sec]")) { S.secs = S.secs || {}; S.secs[d.dataset.sec] = d.open; } }, true);
   setInterval(() => { tickTimers(); tickLoc(); }, 1000);
   setInterval(() => { if (S.tab === "orders" && document.querySelector(".live-loc") && !S.data.loading) loadTab(true); }, 30000);
   // Live location: the cleaner shares GPS only while a job is in progress (every ~30 s). Stops when the job ends.
@@ -380,6 +381,9 @@
     h = Math.round(h * 2) / 2;
     return { hours: h, budget: Math.round(h * (Number(CFG.SUGGESTED_HOURLY) || 30) / 5) * 5 };
   }
+  // Collapsible sections for the booking form (native <details>). Open/closed state survives re-renders.
+  const secO = (k, label) => '<details class="sec" data-sec="' + k + '"' + (S.secs && S.secs[k] === false ? "" : " open") + '><summary>' + esc(label) + "</summary>";
+  const secC = "</details>";
   function vBook() {
     const f = S.form.book || (S.form.book = { segment: "residential", service: "standard", bedrooms: 2, bathrooms: 1, frequency: "once", urgency: "scheduled" });
     const sg = suggest(f);
@@ -394,7 +398,7 @@
       '<div class="sugg-c"><span class="av">' + esc((c.display_name || "?")[0]) + '</span><span><b>' + esc(c.display_name) + "</b><small>★ " + esc(String(c.rating_avg || "–")) + " · " + esc(String(c.jobs_done || 0)) + " " + esc(t("jobs_done_short")) + "</small></span>" +
       '<button type="button" class="btn ghost small" data-act="prefer" data-id="' + esc(c.id) + '">' + esc(t("pick")) + "</button></div>").join("") + "</div></div>" : "";
     return '<h1 class="title">' + esc(t("book_title")) + "</h1>" +
-      '<form class="form stack" data-form="book" novalidate>' + guestCard +
+      '<form class="form stack" data-form="book" novalidate>' + guestCard + secO("what", t("sec_what")) +
       '<div class="seg big">' + [["residential", "home"], ["commercial", "building"]].map(([v, ic]) =>
         '<label class="seg-opt"><input type="radio" name="segment" value="' + v + '"' + (f.segment === v ? " checked" : "") + ">" + "<span>" + icon(ic) + esc(t(v)) + "</span></label>").join("") + "</div>" +
       chips("service", SERVICES[f.segment].map((s) => [s, svcName(s)]), [f.service]) +
@@ -402,17 +406,18 @@
         ? '<div class="card row2">' + stepper("bedrooms", t("bedrooms"), f.bedrooms, 0, 20) + stepper("bathrooms", t("bathrooms"), f.bathrooms, 0, 20) + "</div>"
         : '<div class="card">' + field("property_type", t("business_type"), "text", 'maxlength="60"', null, f.property_type || "") + field("sqft", t("sqft"), "number", 'inputmode="numeric" min="0" max="1000000"', null, f.sqft || "") + "</div>") +
       '<div class="card"><p class="label">' + esc(t("frequency")) + "</p>" + chips("frequency", ["once", "weekly", "biweekly", "monthly"].concat(f.segment === "commercial" ? ["daily"] : []).map((x) => [x, t("freq_" + x)]), [f.frequency]) + "</div>" +
-      '<div class="card"><div class="row2">' + field("zip", t("zip"), "text", 'required inputmode="numeric" pattern="[0-9]{5}" maxlength="5" autocomplete="postal-code"', null, f.zip || "") +
+      secC + secO("where", t("sec_where")) + '<div class="card"><div class="row2">' + field("zip", t("zip"), "text", 'required inputmode="numeric" pattern="[0-9]{5}" maxlength="5" autocomplete="postal-code"', null, f.zip || "") +
       field("city", t("city"), "text", 'maxlength="80" autocomplete="address-level2"', null, f.city || "") + "</div>" +
       field("address", t("address"), "text", 'maxlength="200" autocomplete="street-address"', t("address_private"), f.address || "") + "</div>" +
-      '<div class="card"><p class="label">' + esc(t("when")) + "</p>" + seg("urgency", [["scheduled", t("pick_date")], ["asap", t("asap")]], f.urgency) +
+      secC + secO("when", t("sec_when")) + '<div class="card"><p class="label">' + esc(t("when")) + "</p>" + seg("urgency", [["scheduled", t("pick_date")], ["asap", t("asap")]], f.urgency) +
       (f.urgency === "scheduled" ? field("scheduled_at", t("date_time"), "datetime-local", 'min="' + localMin + '" required', null, f.scheduled_at || "") : "") + "</div>" +
-      '<div class="card"><div class="row2">' + field("hours_est", t("hours_est"), "number", 'step="0.5" min="0.5" max="200" inputmode="decimal"', null, f.hours_est || sg.hours) +
+      secC + secO("details", t("sec_details")) + '<div class="card"><div class="row2">' + field("hours_est", t("hours_est"), "number", 'step="0.5" min="0.5" max="200" inputmode="decimal"', null, f.hours_est || sg.hours) +
       field("budget", t("budget") + " ($)", "number", 'min="0" max="100000" inputmode="numeric"', null, f.budget || sg.budget) + "</div>" +
       '<p class="fine">' + esc(t("budget_hint")) + "</p></div>" +
       '<label class="field"><span>' + esc(t("notes")) + '</span><textarea name="notes" rows="3" maxlength="1000">' + esc(f.notes || "") + "</textarea></label>" +
       (pref ? '<div class="pref">' + icon("user") + "<span>" + esc(t("preferred")) + ": <b>" + esc(pref.display_name) + '</b></span><button type="button" class="x" data-act="clearpref" aria-label="' + esc(t("cancel")) + '">×</button></div>' : "") +
-      suggHtml +
+      secC +
+      (suggHtml ? secO("sugg", t("suggested")) + suggHtml + secC : "") +
       '<button class="btn solid block xl" type="submit">' + esc(t("send_request")) + "</button>" +
       '<p class="fine center">' + esc(t("privacy_note")) + "</p></form>";
   }
