@@ -155,7 +155,12 @@
       myjobs: async () => { const jobs = await API.myJobs(); const live = jobs.find((j) => j.status === "in_progress"); if (live) startSharing(live.id); else stopSharing(); return { jobs }; },
       earnings: async () => { await refreshMe(); return { jobs: await API.myJobs() }; },
       profile: async () => ({ docs: await API.listDocs(S.me.profile.id).catch(() => []), myReviews: await API.myReviews().catch(() => null) }),
-      panel: async () => { const [stats, an] = await Promise.all([API.adminStats(), API.adminAnalytics(14)]); S.data.stats = stats; S.data.an = an; render(); const ai = await API.aiBriefing(lang); return { stats, an, ai }; },
+      panel: async () => {
+        const notesP = (API.adminBrainNotes ? API.adminBrainNotes() : Promise.resolve([])).catch(() => []);
+        const [stats, an, notes] = await Promise.all([API.adminStats(), API.adminAnalytics(14), notesP]);
+        S.data.stats = stats; S.data.an = an; S.data.notes = notes || []; render();
+        const ai = await API.aiBriefing(lang); return { stats, an, ai, notes: S.data.notes };
+      },
       analytics: async () => ({ an: await API.adminAnalytics(S.range || 30) }),
       system: async () => {
         const sys = S.sys || "launch";
@@ -926,6 +931,16 @@
     const order = { urgent: 0, warn: 1, info: 2, good: 3 };
     return out.sort((a, b) => order[a.level] - order[b.level]);
   }
+  // Owner review: notes the brain learned (autopilot). The owner can remove a note or restore it.
+  function notesCard() {
+    const notes = S.data.notes || [];
+    if (!notes.length) return "";
+    const es = lang === "es";
+    return '<section class="card stack notes-card"><p class="label">' + icon("spark") + esc(es ? "Notas que aprendió la IA" : "Notes the AI learned") + "</p>" +
+      notes.slice(0, 30).map((n) => '<div class="note-row st-' + esc(n.status) + '"><div><b>' + esc(n.topic) + "</b><small>" + esc(n.status) + "</small><p>" + esc(n.note) + "</p></div>" +
+        '<button class="btn ghost small" data-act="note-set" data-id="' + esc(n.id) + '" data-status="' + (n.status === "rejected" ? "active" : "rejected") + '">' +
+        esc(n.status === "rejected" ? (es ? "Restaurar" : "Restore") : (es ? "Quitar" : "Remove")) + "</button></div>").join("") + "</section>";
+  }
   function vPanel() {
     const s = S.data.stats;
     if (!s) return loading();
@@ -939,7 +954,7 @@
       (an ? '<div class="hero-spark"><b>' + week + "</b><small>" + esc(lang === "es" ? "pedidos · 7 días" : "orders · 7 days") + "</small>" + owner().spark(an.series, "created") + "</div>" : "") + "</section>";
     const quick = '<div class="quick">' + [["analytics", "chart", t("tab_analytics")], ["system", "grid", lang === "es" ? "Arquitectura" : "Architecture", "architecture"], ["system", "spark", lang === "es" ? "Mejoras" : "Improvements", "improve"], ["system", "users", lang === "es" ? "Clientes" : "Customers", "customers"]]
       .map(([tb, ic, lb, sy]) => '<button class="q" data-act="' + (sy ? "sys" : "tab") + '" data-tab="' + tb + '" data-s="' + (sy || "") + '">' + icon(ic) + "<span>" + esc(lb) + "</span></button>").join("") + "</div>";
-    return hero + brainCard("owner") + quick +
+    return hero + brainCard("owner") + notesCard() + quick +
       '<section class="ceo card"><div class="row between"><p class="eyebrow">' + icon("spark") + esc(t("ai_ceo")) + " · " + esc(t("ai_briefing")) + '</p><span class="pill">' + esc(S.data.ai ? t("ai_live") : t("ai_rules")) + "</span></div>" +
       '<ul class="brief">' + items.map((i) => '<li class="' + esc(i.level) + '"' + (i.tab ? ' data-act="tab" data-tab="' + i.tab + '" role="button" tabindex="0"' : "") + "><i></i><span>" + esc(i.text) + "</span></li>").join("") + "</ul></section>" +
       '<div class="tiles">' + tile(t("m_unmatched"), s.bookings_unmatched, s.bookings_unmatched ? "bad" : "", "bookings") + tile(t("m_pending"), s.workers_pending, s.workers_pending ? "warn" : "", "workers") +
@@ -1107,6 +1122,7 @@
     else if (a === "radio-region") { loadRadio(el.dataset.r); }
     else if (a === "radio-play") { playRadio(Number(el.dataset.i)); }
     else if (a === "radio-genre") { radioState.genre = el.dataset.g; radioEl().pause(); radioState.idx = -1; radioState.playing = false; delete radioState.list[radioState.region]; loadRadio(radioState.region); }
+    else if (a === "note-set") { await run(() => API.adminSetBrainNote(el.dataset.id, el.dataset.status)).catch(() => {}); loadTab(true); }
     else if (a === "radio-open") { openRadioSheet(); }
     else if (a === "radio-close") { const host = document.getElementById("radioSheetHost"); if (host) host.innerHTML = ""; }
     else if (a === "radio-mini-play") { if (radioState.idx < 0) { openRadioSheet(); } else { const au = radioEl(); if (au.paused) au.play().catch(() => { radioState.error = t("radio_fail_play"); refreshRadio(); }); else au.pause(); } }
