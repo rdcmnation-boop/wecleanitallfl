@@ -649,7 +649,10 @@
     const shopHtml = '<section class="card stack"><p class="label">' + icon("cash") + esc(t("learn_shop_title")) + "</p><p class=\"fine\">" + esc(t("learn_shop_hint")) + "</p>" +
       '<p class="label small">' + esc(t("learn_buy")) + "</p><ul class=\"shop\">" + shopRows(L.shop) + "</ul>" +
       '<p class="label small">' + esc(t("learn_rent")) + "</p><ul class=\"shop\">" + shopRows(L.rent) + "</ul></section>";
-    return '<h1 class="title">' + esc(t("learn_title")) + "</h1>" + '<p class="fine">' + esc(t("learn_hint")) + "</p>" + lessons + kitHtml + shopHtml;
+    // Sponsored partners: shown only when there are partners. Labeled, with a disclosure; they never change the safety lessons.
+    const partnerRows = (L.partners || []).map((p) => '<li><b>' + esc(p.n) + '</b> <span class="fine">' + esc(p.what) + '</span> <a href="' + esc(p.url) + '" target="_blank" rel="noopener sponsored">' + esc(t("partners_visit")) + "</a></li>").join("");
+    const partnersHtml = partnerRows ? '<section class="card stack"><p class="label">' + icon("users") + esc(t("partners_title")) + ' <span class="small">' + esc(t("partners_label")) + "</span></p><p class=\"fine\">" + esc(t("partners_disclosure")) + "</p><ul class=\"shop\">" + partnerRows + "</ul></section>" : "";
+    return '<h1 class="title">' + esc(t("learn_title")) + "</h1>" + '<p class="fine">' + esc(t("learn_hint")) + "</p>" + lessons + kitHtml + shopHtml + partnersHtml;
   }
   // One quiz question: tap an answer to check it; the right answer is marked and explained.
   function learnQuiz(lid, qi, q) {

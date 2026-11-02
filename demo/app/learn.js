@@ -3,6 +3,8 @@
 // Business topics are general information, not legal or insurance advice: confirm those with a professional.
 window.WCIA_LEARN = {
   es: {
+    // Sponsored partners (supply businesses). Empty until partner agreements exist. Each: { n: name, what: what they sell, url: https link }.
+    partners: [],
     shop: [
       { n: "Paños de microfibra", q: "microfiber cleaning cloths" },
       { n: "Aspiradora con filtro HEPA", q: "HEPA filter vacuum" },
@@ -102,6 +104,8 @@ window.WCIA_LEARN = {
     }
   },
   en: {
+    // Sponsored partners (supply businesses). Empty until partner agreements exist. Each: { n: name, what: what they sell, url: https link }.
+    partners: [],
     shop: [
       { n: "Microfiber cleaning cloths", q: "microfiber cleaning cloths" },
       { n: "HEPA filter vacuum", q: "HEPA filter vacuum" },
