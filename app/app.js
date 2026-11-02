@@ -208,7 +208,7 @@
   function publicScreen() {
     let body = "";
     if (S.screen === "landing") {
-      body = '<section class="hero"><img class="hero-logo" src="/media/logo-hero.png" width="150" height="123" alt="We Clean It All"><p class="eyebrow">' + esc(t("hero_sub")) + "</p><h1>" + esc(t("hero_title")) + "</h1></section>" +
+      body = '<section class="hero"><img class="hero-logo" src="/media/logo-hero.png" width="150" height="123" alt="We Clean It All"><p class="eyebrow">' + esc(t("hero_sub")) + '</p><h1 class="sr-only">We Clean It All</h1></section>' +
         '<div class="comm-hero"><p class="eyebrow">' + esc(t("comm_eyebrow")) + '</p><p class="comm-slogan">' + esc(t("comm_slogan")) + '</p>' +
         '<div class="row"><a class="btn solid small" href="tel:+19543209303">' + esc(t("comm_call")) + '</a><a class="btn ghost small" href="/comercial/">' + esc(t("comm_quote")) + '</a></div></div>' +
         '<div class="big-choices">' +
