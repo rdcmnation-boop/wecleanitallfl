@@ -547,17 +547,17 @@ select{appearance:none;background-image:linear-gradient(45deg,transparent 50%,va
 .radio-item.on{border-color:var(--lime);box-shadow:0 0 16px -6px rgba(162,234,79,.6)}
 .bad-text{color:var(--bad)}
 
-/* Car-radio card for the radio (own design: neon screen, equalizer, dial, round buttons) */
-.radio-car{background:radial-gradient(120% 90% at 50% -20%,rgba(255,79,216,.2),transparent 60%),linear-gradient(170deg,#140a1f,#070511 70%);border-color:rgba(255,79,216,.35);box-shadow:0 26px 50px -30px rgba(255,79,216,.55),inset 0 1px 0 rgba(255,255,255,.08)}
-.car-screen{position:relative;overflow:hidden;display:flex;flex-direction:column;gap:4px;padding:16px 16px 14px;border-radius:18px;background:linear-gradient(180deg,#120a22,#07040f);box-shadow:inset 0 0 0 1px rgba(63,243,255,.35),inset 0 0 26px rgba(63,243,255,.12),0 0 24px -8px rgba(255,79,216,.6)}
-.car-screen::after{content:"";position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(180deg,rgba(255,255,255,.04) 0 1px,transparent 1px 3px)}
-.car-tag{align-self:flex-start;font:800 11px/1 var(--display);letter-spacing:.2em;color:#3ff3ff;text-shadow:0 0 8px rgba(63,243,255,.8)}
-.car-tag.live{color:#ff4fd8;text-shadow:0 0 10px rgba(255,79,216,.9);animation:carblink 1.2s steps(2,start) infinite}
+/* Car-radio card for the radio (own design, in the app's black and lime green) */
+.radio-car{background:radial-gradient(120% 90% at 50% -20%,rgba(162,234,79,.16),transparent 60%),linear-gradient(170deg,#0c1610,#030605 70%);border-color:rgba(162,234,79,.38);box-shadow:0 26px 50px -30px rgba(162,234,79,.5),inset 0 1px 0 rgba(255,255,255,.07)}
+.car-screen{position:relative;overflow:hidden;display:flex;flex-direction:column;gap:4px;padding:16px 16px 14px;border-radius:18px;background:linear-gradient(180deg,#0c1610,#030605);box-shadow:inset 0 0 0 1px rgba(162,234,79,.35),inset 0 0 26px rgba(162,234,79,.1),0 0 24px -10px rgba(162,234,79,.55)}
+.car-screen::after{content:"";position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(180deg,rgba(255,255,255,.03) 0 1px,transparent 1px 3px)}
+.car-tag{align-self:flex-start;font:800 11px/1 var(--display);letter-spacing:.2em;color:var(--lime);text-shadow:0 0 8px rgba(162,234,79,.7)}
+.car-tag.live{color:var(--lime-hot);text-shadow:0 0 10px rgba(162,234,79,.9);animation:carblink 1.2s steps(2,start) infinite}
 @keyframes carblink{to{visibility:hidden}}
-.car-name{font:800 26px/1.1 var(--display);color:#fff;text-shadow:0 0 14px rgba(255,79,216,.7);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.car-meta{color:#9fe9f5;font-size:13px;min-height:1em}
+.car-name{font:800 26px/1.1 var(--display);color:var(--text);text-shadow:0 0 14px rgba(162,234,79,.45);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.car-meta{color:var(--muted);font-size:13px;min-height:1em}
 .car-eq{display:flex;align-items:flex-end;gap:4px;height:28px;margin-top:6px}
-.car-eq i{width:6px;height:6px;border-radius:2px;background:linear-gradient(180deg,#ff4fd8,#3ff3ff)}
+.car-eq i{width:6px;height:6px;border-radius:2px;background:linear-gradient(180deg,var(--lime-hot),var(--lime))}
 .car-eq.on i{animation:careq .9s ease-in-out infinite}
 .car-eq.on i:nth-child(2){animation-delay:.15s}
 .car-eq.on i:nth-child(3){animation-delay:.3s}
@@ -565,13 +565,13 @@ select{appearance:none;background-image:linear-gradient(45deg,transparent 50%,va
 .car-eq.on i:nth-child(5){animation-delay:.6s}
 .car-eq.on i:nth-child(6){animation-delay:.75s}
 @keyframes careq{0%,100%{height:6px}50%{height:28px}}
-.car-dial{position:relative;height:18px;margin:10px 4px 6px;border-radius:9px;background:repeating-linear-gradient(90deg,rgba(255,255,255,.35) 0 1px,transparent 1px 12px),linear-gradient(90deg,#2a1640,#0b0716);box-shadow:inset 0 0 0 1px rgba(63,243,255,.25)}
-.car-needle{position:absolute;top:-4px;bottom:-4px;width:3px;margin-left:-1.5px;border-radius:2px;background:#ff4fd8;box-shadow:0 0 10px #ff4fd8;transition:left .4s cubic-bezier(.2,.8,.2,1)}
+.car-dial{position:relative;height:18px;margin:10px 4px 6px;border-radius:9px;background:repeating-linear-gradient(90deg,rgba(255,255,255,.3) 0 1px,transparent 1px 12px),linear-gradient(90deg,#14261a,#060c08);box-shadow:inset 0 0 0 1px rgba(162,234,79,.25)}
+.car-needle{position:absolute;top:-4px;bottom:-4px;width:3px;margin-left:-1.5px;border-radius:2px;background:var(--lime);box-shadow:0 0 10px var(--lime);transition:left .4s cubic-bezier(.2,.8,.2,1)}
 .car-controls{display:flex;align-items:center;justify-content:center;gap:14px}
-.car-btn,.car-play{display:grid;place-items:center;border:0;cursor:pointer;color:#fff;font:800 18px/1 var(--display);padding:0;transition:transform .12s ease,box-shadow .12s ease}
-.car-btn{width:52px;height:52px;border-radius:50%;background:linear-gradient(180deg,#2a1b40,#120a1e);box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 6px 0 #05030a,0 0 0 1px rgba(63,243,255,.3)}
-.car-btn:active{transform:translateY(3px);box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 3px 0 #05030a,0 0 0 1px rgba(63,243,255,.3)}
-.car-play{width:72px;height:72px;border-radius:50%;background:linear-gradient(180deg,#ff6fe4,#ff2fc4);box-shadow:0 7px 0 #7a0f63,0 0 26px rgba(255,79,216,.6)}
-.car-play:active{transform:translateY(4px);box-shadow:0 3px 0 #7a0f63,0 0 26px rgba(255,79,216,.6)}
+.car-btn,.car-play{display:grid;place-items:center;border:0;cursor:pointer;color:var(--text);font:800 18px/1 var(--display);padding:0;transition:transform .12s ease,box-shadow .12s ease}
+.car-btn{width:52px;height:52px;border-radius:50%;background:linear-gradient(180deg,#14261a,#0a1409);box-shadow:inset 0 1px 0 rgba(255,255,255,.1),0 6px 0 #030605,0 0 0 1px rgba(162,234,79,.3)}
+.car-btn:active{transform:translateY(3px);box-shadow:inset 0 1px 0 rgba(255,255,255,.1),0 3px 0 #030605,0 0 0 1px rgba(162,234,79,.3)}
+.car-play{width:72px;height:72px;border-radius:50%;color:var(--leaf);background:linear-gradient(180deg,#c9f78c,var(--lime) 45%,#86d23a);box-shadow:0 7px 0 #3f7019,0 0 26px rgba(162,234,79,.45)}
+.car-play:active{transform:translateY(4px);box-shadow:0 3px 0 #3f7019,0 0 26px rgba(162,234,79,.45)}
 .car-stop{font-size:14px}
 @media (prefers-reduced-motion:reduce){.car-eq i,.car-tag.live{animation:none}.car-needle{transition:none}}
