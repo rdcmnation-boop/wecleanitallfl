@@ -46,6 +46,20 @@ async function logQuestion(base: string, role: string, question: string, answere
   }).catch((e) => console.error("brain: log failed", String(e)));
 }
 
+// Usage cap: at most HOURLY_CAP answered replies an hour for customers and workers, counted from brain_questions.
+// Owner questions are not logged, so they are not counted or capped. A failed count never blocks a reply.
+const HOURLY_CAP = 300;
+async function overHourlyCap(base: string): Promise<boolean> {
+  const key = env("SUPABASE_SERVICE_ROLE_KEY");
+  if (!key) return false;
+  const since = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+  const q = base + "/rest/v1/brain_questions?select=id&answered=eq.true&created_at=gte." + encodeURIComponent(since) + "&limit=" + HOURLY_CAP;
+  const r = await fetch(q, { headers: { apikey: key, Authorization: "Bearer " + key } }).catch(() => null);
+  if (!r || !r.ok) { console.error("brain: cap check failed"); return false; }
+  const rows: unknown[] = await r.json();
+  return rows.length >= HOURLY_CAP;
+}
+
 // Cleaning knowledge shared by all three assistants. Facts about prices, policies or insurance are never invented here.
 const CLEANING = [
   "CONOCIMIENTO DE LIMPIEZA (lo general de la industria; lo que incluye cada servicio exacto se confirma en la reserva o con la empresa):",
@@ -115,6 +129,7 @@ Deno.serve(async (req) => {
 
   const key = env("ANTHROPIC_API_KEY");
   if (!key) { await logQuestion(base, role, message, false); return json({ mode: "off" }); }
+  if (role !== "owner" && await overHourlyCap(base)) return json({ mode: "limit" }, 429);
 
   const ctx = JSON.stringify(body.context ?? {}).slice(0, 4000);
   const notes = await activeNotes(base, role);
