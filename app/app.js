@@ -112,7 +112,12 @@
   }
 
   // ───────── boot ─────────
+  // A phone can get this file before a cached copy of the page catches up; load the menu/cleaner layer if it is missing.
+  const ensureDash = () => window.WCIA_DASH ? Promise.resolve() : new Promise((ok) => {
+    const s = document.createElement("script"); s.src = "/app/dash.js?v=" + APP_VERSION; s.onload = s.onerror = () => ok(); document.head.appendChild(s);
+  });
   async function boot() {
+    await ensureDash();
     document.documentElement.lang = lang;
     if (API.hasSession()) {
       try { S.me = await API.me(); } catch (e) { S.me = null; }
@@ -141,7 +146,7 @@
     worker: [],
     admin: [["panel", "grid", "tab_panel"], ["bookings", "list", "tab_bookings"], ["workers", "users", "tab_workers"], ["system", "spark", "tab_more"]]
   };
-  const APP_VERSION = "2026.11.2";
+  const APP_VERSION = "2026.11.2b";
   let DASH = null;
   const DD = () => DASH || (DASH = window.WCIA_DASH({ t, esc, icon, money, when, svcName, S, CFG, wa, tel, stars, empty, loading, jobTimer, statusBanner, reviewsPanel, role, brainCard, store, tile, lang: () => lang, version: APP_VERSION }));
   // Screens a role can open (tab bar + side menu + sub-screens), so a saved screen is restored after a reload.
