@@ -386,3 +386,17 @@ select{appearance:none;background-image:linear-gradient(45deg,transparent 50%,va
 .comm-hero .eyebrow{justify-content:center}
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 .hero-logo{display:block;margin:0 auto 6px;width:150px;max-width:50%;height:auto;filter:drop-shadow(0 10px 14px rgba(0,0,0,.7)) drop-shadow(0 0 22px rgba(155,229,74,.35))}
+.ag{padding:8px 0;border-top:1px solid rgba(255,255,255,.08)}
+.ag .btn{padding:6px 12px;min-height:0;font-size:13px}
+.ag .pill{font-size:12px;padding:3px 8px}
+.ag-d{margin:2px 0 0;font-size:13px;line-height:1.35}
+.ckrow{display:flex;gap:10px;align-items:center;padding:7px 0;border-top:1px solid rgba(255,255,255,.06);font-size:14px}
+.ckrow.top{align-items:flex-start}
+.ck{flex:0 0 22px;width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;border:2px solid var(--faint)}
+.ck.ok{background:var(--lime);border-color:var(--lime);color:#07120a}
+.ck.ok svg{width:14px;height:14px}
+.imp{padding:12px 14px;margin-bottom:10px}
+.imp .btn{padding:7px 14px;min-height:0;font-size:13px}
+.imp h3{font-size:17px;margin:6px 0 4px}
+.imp p{font-size:14px;margin:0 0 8px}
+.ckrow.top>div{flex:1;min-width:0;text-align:left}

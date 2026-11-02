@@ -192,9 +192,13 @@
         '<div class="row"><button class="btn solid small" data-act="ask">' + esc(tr("Run", "Ejecutar")) + "</button></div>" +
         (ans ? answerHtml(ans) : "") + "</section>";
       const rowStyle = 'style="padding:12px 0;border-top:1px solid rgba(255,255,255,.08)"';
-      const reg = '<section class="card"><p class="eyebrow">' + esc(tr("Agents", "Agentes")) + "</p>" +
+      const paused = d.agents.filter((a) => a.status !== "active").length;
+      const reg = '<section class="card"><div class="row between"><p class="eyebrow">' + esc(tr("Agents", "Agentes")) + "</p>" +
+        (paused ? '<button class="btn solid small" data-act="agentsall">' + esc(tr("Activate all", "Activar todos")) + " (" + paused + ")</button>" : '<span class="pill">' + esc(tr("All active", "Todos activos")) + "</span>") + "</div>" +
         d.agents.map((a) => { const on = a.status === "active";
-          return "<div " + rowStyle + '><div class="row between"><b>' + esc(a.agent) + '</b><span class="pill">' + esc(a.max_class) + " · " + esc(on ? tr("Active", "Activo") : tr("Paused", "Pausado")) + '</span></div><p class="muted" style="margin:6px 0 10px">' + esc(a.role_description) + '</p><button class="btn ghost small" data-act="agentstatus" data-agent="' + esc(a.agent) + '" data-s="' + (on ? "paused" : "active") + '">' + esc(on ? tr("Pause", "Pausar") : tr("Activate", "Activar")) + "</button></div>"; }).join("") + "</section>";
+          return '<div class="ag"><div class="row between"><b>' + esc(a.agent) + '</b><span class="row" style="gap:8px"><span class="pill">' + esc(a.max_class) + " · " + esc(on ? tr("Active", "Activo") : tr("Paused", "Pausado")) + '</span>' +
+            '<button class="btn ghost small" data-act="agentstatus" data-agent="' + esc(a.agent) + '" data-s="' + (on ? "paused" : "active") + '">' + esc(on ? tr("Pause", "Pausar") : tr("Activate", "Activar")) + "</button></span></div>" +
+            '<p class="muted ag-d">' + esc(a.role_description) + "</p></div>"; }).join("") + "</section>";
       const pend = '<section class="card"><p class="eyebrow">' + esc(tr("Waiting for your approval", "Esperan tu aprobación")) + "</p>" +
         (d.pending && d.pending.length ? d.pending.map((p) => '<div ' + rowStyle + '><b>' + esc(p.agent) + " → " + esc(p.action) + '</b><pre class="muted" style="white-space:pre-wrap;font-size:12px">' + esc(JSON.stringify(p.payload || {}, null, 1)) + '</pre><input data-reason="' + esc(p.id) + '" placeholder="' + esc(tr("Reason (required to reject)", "Motivo (obligatorio para rechazar)")) + '"><div class="row" style="margin-top:8px"><button class="btn solid small" data-act="decide" data-id="' + esc(p.id) + '" data-s="approved">' + esc(tr("Approve", "Aprobar")) + '</button><button class="btn ghost small" data-act="decide" data-id="' + esc(p.id) + '" data-s="rejected">' + esc(tr("Reject", "Rechazar")) + "</button></div></div>").join("") : '<p class="muted">' + esc(tr("Nothing pending.", "Nada pendiente.")) + "</p>") + "</section>";
       const log = '<section class="card"><p class="eyebrow">' + esc(tr("Agent activity (read-only)", "Actividad de agentes (solo lectura)")) + "</p>" +
@@ -202,11 +206,41 @@
       return composer + reg + pend + log;
     }
 
-    const SYS = [["architecture", "grid"], ["improve", "bulb"], ["agents", "list"], ["updates", "bell"], ["customers", "users"], ["connectors", "plug"], ["account", "user"]];
+    // Launch checklist: what already works (checked) and what is still missing, with direct links.
+    function vLaunch() {
+      const es = L(), tr = (en, esTxt) => (es ? esTxt : en);
+      const P = "https://supabase.com/dashboard/project/fqajygzjteauxornipva";
+      const done = [
+        ["Site live at wecleanitallfl.com", "Sitio en vivo en wecleanitallfl.com"],
+        ["Single-owner lock (only your account can be owner)", "Candado de único dueño (solo tu cuenta es dueño)"],
+        ["2-step code required for owner powers", "Código de 2 pasos obligatorio para el dueño"],
+        ["Owner panel: orders, cleaners, analytics, improvements", "Panel de dueño: pedidos, limpiadores, analítica, mejoras"],
+        ["10 agents with approvals and a read-only audit log", "10 agentes con aprobaciones y registro de auditoría de solo lectura"],
+        ["Agent console (read-only reports)", "Consola de agentes (reportes de solo lectura)"],
+        ["Spanish / English, installable on the phone", "Español / inglés, se instala en el teléfono"]
+      ];
+      const todo = [
+        ["Test the agent database rules", "Probar las reglas de la base de datos de agentes", "Paste agents_phase1_test.sql and send me the DRYRUN_RESULT line.", "Pega agents_phase1_test.sql y mándame la línea DRYRUN_RESULT.", [["SQL Editor", "SQL Editor", P + "/sql/new"]]],
+        ["Block leaked passwords", "Bloquear contraseñas filtradas", "Turn on leaked-password protection (Email provider).", "Activa la protección de contraseñas filtradas (proveedor Email).", [["Auth settings", "Ajustes de Auth", P + "/auth/providers"]]],
+        ["Remember this device (owner)", "Recordar dispositivo (dueño)", "Built and tested. Needs its SQL applied in Supabase.", "Listo y probado. Falta aplicar su SQL en Supabase.", [["SQL Editor", "SQL Editor", P + "/sql/new"]]],
+        ["AI CEO with Claude", "AI CEO con Claude", "Create a key, then save it as ANTHROPIC_API_KEY.", "Crea una clave y guárdala como ANTHROPIC_API_KEY.", [["Get key", "Crear clave", "https://console.anthropic.com/settings/keys"], ["Save secret", "Guardar secreto", P + "/functions/secrets"]]],
+        ["WhatsApp agent that answers (Twilio for now)", "Agente de WhatsApp que responde (Twilio por ahora)", "You as owner, everyone else as users. Needs Twilio Account SID, Auth Token and a WhatsApp number. Not built yet.", "Tú como dueño, los demás como usuarios. Necesita Account SID, Auth Token y un número de WhatsApp de Twilio. Aún no está construido.", [["Twilio WhatsApp", "Twilio WhatsApp", "https://console.twilio.com/us1/develop/sms/try-it-out/whatsapp-learn"]]],
+        ["Card payments (optional)", "Pagos con tarjeta (opcional)", "Not built yet.", "Aún no está construido.", [["Stripe keys", "Claves de Stripe", "https://dashboard.stripe.com/apikeys"]]],
+        ["4 agent decisions", "4 decisiones de agentes", "Messages without approval, AI provider and spend cap, first live agents, audit retention.", "Mensajes sin aprobación, proveedor de IA y tope de gasto, primeros agentes en vivo, retención de auditoría.", []]
+      ];
+      const ok = '<span class="ck ok">' + icon("check") + "</span>", no = '<span class="ck no"></span>';
+      return '<section class="card"><p class="eyebrow">' + esc(tr("Already working", "Ya funciona")) + " · " + done.length + "</p>" +
+        done.map((x) => '<div class="ckrow">' + ok + "<span>" + esc(tr(x[0], x[1])) + "</span></div>").join("") + "</section>" +
+        '<section class="card"><p class="eyebrow">' + esc(tr("Still missing for launch", "Falta para el lanzamiento")) + " · " + todo.length + "</p>" +
+        todo.map((x) => '<div class="ckrow top">' + no + '<div><b>' + esc(tr(x[0], x[1])) + '</b><p class="muted ag-d">' + esc(tr(x[2], x[3])) + "</p>" +
+          (x[4].length ? '<div class="row" style="gap:8px;flex-wrap:wrap;margin-top:6px">' + x[4].map((l) => '<a class="btn ghost small" target="_blank" rel="noopener" href="' + esc(l[2]) + '">' + esc(tr(l[0], l[1])) + "</a>").join("") + "</div>" : "") + "</div></div>").join("") + "</section>";
+    }
+
+    const SYS = [["launch", "check"], ["architecture", "grid"], ["improve", "bulb"], ["agents", "list"], ["updates", "bell"], ["customers", "users"], ["connectors", "plug"], ["account", "user"]];
     function vSystem(views) {
-      const cur = S.sys || "architecture", es = L();
-      const names = { architecture: es ? "Arquitectura" : "Architecture", improve: es ? "Mejoras" : "Improvements", agents: es ? "Agentes" : "Agents", updates: es ? "Actualizaciones" : "Updates", customers: es ? "Clientes" : "Customers", connectors: t("tab_connectors"), account: t("tab_account") };
-      const body = { architecture: vArchitecture, improve: vImprove, agents: vAgents, updates: vUpdates, customers: vCustomers, connectors: views.connectors, account: views.account }[cur];
+      const cur = S.sys || "launch", es = L();
+      const names = { launch: es ? "Lanzamiento" : "Launch", architecture: es ? "Arquitectura" : "Architecture", improve: es ? "Mejoras" : "Improvements", agents: es ? "Agentes" : "Agents", updates: es ? "Actualizaciones" : "Updates", customers: es ? "Clientes" : "Customers", connectors: t("tab_connectors"), account: t("tab_account") };
+      const body = { launch: vLaunch, architecture: vArchitecture, improve: vImprove, agents: vAgents, updates: vUpdates, customers: vCustomers, connectors: views.connectors, account: views.account }[cur];
       return '<h1 class="title">' + esc(names[cur]) + "</h1>" +
         '<div class="sysnav">' + SYS.map(([k, ic]) => '<button class="' + (cur === k ? "on" : "") + '" data-act="sys" data-s="' + k + '">' + icon(ic) + "<span>" + esc(names[k]) + "</span></button>").join("") + "</div>" + body();
     }

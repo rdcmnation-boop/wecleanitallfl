@@ -156,7 +156,7 @@
       panel: async () => { const [stats, an] = await Promise.all([API.adminStats(), API.adminAnalytics(14)]); S.data.stats = stats; S.data.an = an; render(); const ai = await API.aiBriefing(lang); return { stats, an, ai }; },
       analytics: async () => ({ an: await API.adminAnalytics(S.range || 30) }),
       system: async () => {
-        const sys = S.sys || "architecture";
+        const sys = S.sys || "launch";
         if (sys === "architecture") { const [stats, ai] = await Promise.all([API.adminStats(), S.data.ai !== undefined ? S.data.ai : API.aiBriefing(lang)]); return { stats, ai }; }
         if (sys === "improve") { const [stats, an, workers] = await Promise.all([API.adminStats(), API.adminAnalytics(30), API.adminWorkers()]); return { stats, an, workers }; }
         if (sys === "updates") return { activity: await API.adminActivity() };
@@ -657,6 +657,7 @@
     if (a === "lang") { lang = lang === "es" ? "en" : "es"; store.set("wcia_lang", lang); document.documentElement.lang = lang; render(); }
     else if (a === "auth") { S.authRole = el.dataset.role; S.form.kind = "individual"; S.screen = "signup"; render(); }
     else if (a === "signin") { S.screen = "signin"; render(); }
+    else if (a === "agentsall") { const off = ((S.data && S.data.agents) || []).filter((x) => x.status !== "active"); try { for (const x of off) await API.adminSetAgentStatus(x.agent, "active"); toast(t("saved")); } catch (err) { console.error(err); toast(t("error_generic"), "bad"); } loadTab(true); }
     else if (a === "skipmfa") { S.skipMfa = true; S.mfa = null; startRole(); }
     else if (a === "forgot") { S.screen = "forgot"; render(); }
     else if (a === "home") { S.screen = "landing"; render(); }
