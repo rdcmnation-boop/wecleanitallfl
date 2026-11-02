@@ -160,6 +160,7 @@
         if (sys === "improve") { const [stats, an, workers] = await Promise.all([API.adminStats(), API.adminAnalytics(30), API.adminWorkers()]); return { stats, an, workers }; }
         if (sys === "updates") return { activity: await API.adminActivity() };
         if (sys === "customers") return { customers: await API.adminCustomers() };
+        if (sys === "agents") { const [agents, pending, log] = await Promise.all([API.adminAgents(), API.adminPendingApprovals(), API.adminAgentLog(50)]); return { agents, pending, log }; }
         if (sys === "connectors") return { stats: await API.adminStats() };
         return {};
       },
@@ -684,6 +685,12 @@
     else if (a === "wfilter") { S.filter = el.dataset.f; render(); }
     else if (a === "range") { S.range = Number(el.dataset.d); S.data.an = null; render(); loadTab(true); }
     else if (a === "sys") { S.tab = "system"; S.sys = el.dataset.s || "architecture"; store.set("wcia_tab_" + role(), "system"); S.data = {}; loadTab(); }
+    else if (a === "agentstatus") { await run(() => API.adminSetAgentStatus(el.dataset.agent, el.dataset.s), t("saved")).catch(() => {}); loadTab(true); }
+    else if (a === "decide") {
+      const reason = (root.querySelector('[data-reason="' + id + '"]') || {}).value || "";
+      if (el.dataset.s === "rejected" && reason.trim().length < 3) { root.querySelector('[data-reason="' + id + '"]').focus(); return; }
+      await run(() => API.adminDecideApproval(id, el.dataset.s, reason.trim()), t("saved")).catch(() => {}); loadTab(true);
+    }
     else if (a === "bfilter") { S.bfilter = el.dataset.f; render(); }
     else if (a === "wstatus") { await run(() => API.adminSetWorkerStatus(id, el.dataset.s), t("saved")).catch(() => {}); loadTab(true); }
     else if (a === "assign") {
