@@ -213,7 +213,7 @@
   function publicScreen() {
     let body = "";
     if (S.screen === "landing") {
-      body = '<section class="hero"><img class="hero-logo" src="/media/logo-hero.png" width="150" height="123" alt="We Clean It All"><p class="eyebrow">' + esc(t("hero_sub")) + '</p><h1 class="sr-only">We Clean It All</h1></section>' +
+      body = '<section class="hero"><div class="logo-stage"><div class="logo-spin"><img class="hero-logo" src="/media/logo-hero.png" width="150" height="123" alt="We Clean It All"></div></div><p class="eyebrow">' + esc(t("hero_sub")) + '</p><h1 class="sr-only">We Clean It All</h1></section>' +
         '<div class="big-choices">' +
         '<button class="big-choice" data-act="' + (guestEnabled() ? "guest" : "auth") + '" data-role="customer">' + icon("home", "lg") + "<span><b>" + esc(t("need_cleaning")) + "</b><small>" + esc(t("need_cleaning_sub")) + "</small></span></button>" +
         '<button class="big-choice" data-act="auth" data-role="worker">' + icon("broom", "lg") + "<span><b>" + esc(t("want_work")) + "</b><small>" + esc(t("want_work_sub")) + "</small></span></button>" +
@@ -852,6 +852,24 @@
     tipEl.style.left = Math.max(8, Math.min(innerWidth - w - 8, r.left + r.width / 2 - w / 2)) + "px";
     tipEl.style.top = Math.max(8, r.top - tipEl.offsetHeight - 8) + "px";
   }
+  // 3D tilt for the landing logo: follows the mouse while it hovers over the logo
+  root.addEventListener("pointermove", (e) => {
+    if (e.pointerType !== "mouse") return;
+    const stage = e.target.closest && e.target.closest(".logo-stage");
+    if (!stage) return;
+    const img = stage.querySelector(".hero-logo"), r = img.getBoundingClientRect();
+    const x = Math.max(-1, Math.min(1, (e.clientX - (r.left + r.width / 2)) / r.width));
+    const y = Math.max(-1, Math.min(1, (e.clientY - (r.top + r.height / 2)) / r.height));
+    img.style.setProperty("--ry", (x * 30).toFixed(1) + "deg");
+    img.style.setProperty("--rx", (-y * 22).toFixed(1) + "deg");
+  });
+  root.addEventListener("pointerout", (e) => {
+    const stage = e.target.closest && e.target.closest(".logo-stage");
+    if (!stage || stage.contains(e.relatedTarget)) return;
+    const img = stage.querySelector(".hero-logo");
+    img.style.removeProperty("--rx");
+    img.style.removeProperty("--ry");
+  });
   root.addEventListener("mouseover", showTip);
   root.addEventListener("pointerdown", (e) => { if (e.pointerType !== "mouse") showTip(e); });
   root.addEventListener("mouseleave", () => tipEl.classList.remove("in"));
