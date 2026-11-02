@@ -242,6 +242,9 @@
       adminAgentOverview: () => rpc("admin_agent_overview"),
       adminCloseTask: (id, status) => rpc("admin_close_task", { p_id: id, p_status: status }),
       adminSetOwnerWhatsApp: (phone) => rpc("admin_set_owner_whatsapp", { p_phone: phone }),
+      payInfo: () => rpc("pay_info"),
+      adminMoney: () => rpc("admin_money"),
+      adminSetFees: (pct, instant) => rpc("admin_set_fees", { p_fee_pct: pct, p_instant_fee: instant }),
       adminSaveAgentSettings: (cap, autoSend, model, messagingOn) => rpc("admin_save_agent_settings", { p_cap: cap, p_auto_send: autoSend, p_model: model, p_messaging_on: messagingOn }),
       adminBrainNotes: () => rpc("admin_brain_notes"),
       adminSetBrainNote: (id, status) => rpc("admin_set_brain_note", { p_id: id, p_status: status }),
@@ -573,6 +576,14 @@
             { id: 2, agent: "orchestrator", kind: "wa_handoff", title: "WhatsApp: client Ana asks for a person (…0101)", status: "open", created_at: day(-0.01), phone: "13055550101" }], open_tasks: 2 };
       },
       async adminCloseTask() {},
+      async payInfo() { return store.get("wcia_demo_pay", null) || { fee_pct: 12, instant_fee: 1.99, payments_on: false }; },
+      async adminMoney() {
+        const p = await this.payInfo(), db = load(), since = Date.now() - 30 * 864e5;
+        const done = db.bookings.filter((b) => b.status === "completed" && Date.parse(b.completed_at) > since);
+        const sum = done.reduce((s, b) => s + (Number(b.budget) || 0), 0);
+        return Object.assign({}, p, { jobs_30d: done.length, cleaners_30d: sum, fees_30d: 0, fees_at_rate_30d: Math.round(sum * p.fee_pct) / 100, open_fees: 0 });
+      },
+      async adminSetFees(pct, instant) { const p = await this.payInfo(); if (pct != null) p.fee_pct = pct; if (instant != null) p.instant_fee = instant; store.set("wcia_demo_pay", p); return p; },
       async adminSetOwnerWhatsApp(phone) { const st = (await this.adminAgentOverview()).settings; const d = String(phone || "").replace(/\D/g, ""); need(d.length >= 10, "invalid_phone"); st.owner_whatsapp_last4 = d.slice(-4); store.set("wcia_demo_agset", st); return d.slice(-4); },
       async adminSaveAgentSettings(cap, autoSend, model, messagingOn) {
         const st = (await this.adminAgentOverview()).settings;

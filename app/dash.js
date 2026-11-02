@@ -9,6 +9,9 @@
   Object.assign(I.es, {
     m_home: "Inicio", m_schedule: "Agenda", m_ratings: "Calificaciones", m_career: "Capacitación y carrera", m_tips: "Consejos",
     m_help: "Ayuda", m_menu: "Menú", tab_home: "Inicio", tab_more: "Más",
+    fee_cleaner: "Para tu limpiador", fee_service: "Tarifa de servicio ({p}%)", fee_total: "Total",
+    payout_title: "Cómo te pagan", payout_keep: "Te quedas con el 100% del precio del trabajo y de las propinas.", payout_weekly: "Pago semanal", payout_free: "Gratis, cada lunes a tu banco",
+    payout_instant: "Pago el mismo día", payout_per: "por retiro", payout_soon: "Los pagos en la app empiezan cuando se activen los pagos con tarjeta.",
     price_label: "Precio", price_hint: "Precio justo para este tamaño: {p} · tu limpiador gana unos {h} por hora. Puedes agregar más, no menos.",
     price_low: "El precio no puede ser menos de {p}: es lo que el limpiador necesita para este trabajo.", open_all: "Abrir todo", close_all: "Cerrar todo", price_too_low: "El precio está por debajo de lo justo para el limpiador. Súbelo e intenta de nuevo.",
     brain_off_owner: "La IA se activa al agregar la clave de Claude (máximo $10 al mes). Mientras tanto, usa el resumen del panel.",
@@ -63,6 +66,9 @@
   Object.assign(I.en, {
     m_home: "Home", m_schedule: "Schedule", m_ratings: "Ratings", m_career: "Training & career", m_tips: "Tips",
     m_help: "Help", m_menu: "Menu", tab_home: "Home", tab_more: "More",
+    fee_cleaner: "For your cleaner", fee_service: "Service fee ({p}%)", fee_total: "Total",
+    payout_title: "How you get paid", payout_keep: "You keep 100% of the job price and tips.", payout_weekly: "Weekly payout", payout_free: "Free, every Monday to your bank",
+    payout_instant: "Same-day payout", payout_per: "per cash-out", payout_soon: "In-app payouts start when card payments are turned on.",
     price_label: "Price", price_hint: "Fair price for this size: {p} · your cleaner earns about {h} an hour. You can add more, not less.",
     price_low: "The price can't be below {p}: that's what your cleaner needs for this job.", open_all: "Open all", close_all: "Close all", price_too_low: "The price is below fair pay for the cleaner. Raise it and try again.",
     brain_off_owner: "AI turns on when the Claude key is added ($10/month max). For now, use the panel summary.",
@@ -314,6 +320,8 @@
       const w = S.me.worker || {};
       return '<h1 class="title">' + esc(t("tab_earnings")) + "</h1>" +
         '<section class="earn-hero"><small>' + esc(t("this_week")) + "</small><b>" + esc(money2(week)) + '</b><p class="fine">' + esc(t("earn_note")) + "</p></section>" +
+        (S.pay ? '<section class="card payout"><p class="label">' + icon("cash") + esc(t("payout_title")) + '</p><p>' + esc(t("payout_keep")) + '</p><div class="ag-row"><div><b>' + esc(t("payout_weekly")) + '</b><small>' + esc(t("payout_free")) + '</small></div></div><div class="ag-row"><div><b>' + esc(t("payout_instant")) + '</b><small>' + esc("$" + Number(S.pay.instant_fee || 0).toFixed(2) + " " + t("payout_per")) + "</small></div></div>" +
+          (S.pay.payments_on ? "" : '<p class="fine">' + esc(t("payout_soon")) + "</p>") + "</section>" : "") +
         '<section class="card"><div class="row between"><p class="label">' + esc(t("week_goal")) + '</p><button class="round-btn sm" data-act="goal" aria-label="' + esc(t("goal_set")) + '">' + icon("pen") + "</button></div>" +
         (goal ? '<div class="goal-bar"><i style="width:' + pct + '%"></i></div><div class="row between"><b>' + esc(money(week)) + " / " + esc(money(goal)) + '</b><span class="muted">' + esc(week >= goal ? t("goal_done") : t("goal_left", { m: money(goal - week) })) + "</span></div>"
           : '<button class="btn ghost small" data-act="goal">' + esc(t("goal_set")) + "</button>") + "</section>" +

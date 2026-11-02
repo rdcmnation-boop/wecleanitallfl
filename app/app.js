@@ -146,7 +146,7 @@
     worker: [],
     admin: [["panel", "grid", "tab_panel"], ["bookings", "list", "tab_bookings"], ["workers", "users", "tab_workers"], ["system", "spark", "tab_more"]]
   };
-  const APP_VERSION = "2026.11.2g";
+  const APP_VERSION = "2026.11.2h";
   let DASH = null;
   const DD = () => DASH || (DASH = window.WCIA_DASH({ t, esc, icon, money, when, svcName, S, CFG, wa, tel, stars, empty, loading, jobTimer, statusBanner, reviewsPanel, role, brainCard, store, tile, lang: () => lang, version: APP_VERSION }));
   // Screens a role can open (tab bar + side menu + sub-screens), so a saved screen is restored after a reload.
@@ -172,7 +172,7 @@
     const loaders = {
       orders: async () => { const orders = await API.myBookings(); trackChanges(orders); return { orders }; },
       cleaners: async () => ({ cleaners: await API.listWorkers(S.form.dirZip || "", S.form.dirSvc || "") }),
-      book: async () => ({ cleaners: await API.listWorkers((S.form.book && S.form.book.zip) || "", (S.form.book && S.form.book.service) || "").catch(() => []) }),
+      book: async () => ({ pay: S.pay = await API.payInfo().catch(() => S.pay || null), cleaners: await API.listWorkers((S.form.book && S.form.book.zip) || "", (S.form.book && S.form.book.service) || "").catch(() => []) }),
       jobs: async () => { await refreshMe(); return { offers: S.me.worker && S.me.worker.status === "approved" ? await API.myOffers() : [] }; },
       // Cleaner home: offers, own jobs, demand by zone and the score (for the tier in the menu), in one go.
       dash: async () => {
@@ -183,7 +183,7 @@
         return { offers, jobs, demand, score };
       },
       myjobs: async () => { const jobs = await API.myJobs(); shareFor(jobs); return { jobs }; },
-      earnings: async () => { await refreshMe(); return { jobs: await API.myJobs() }; },
+      earnings: async () => { await refreshMe(); S.pay = await API.payInfo().catch(() => S.pay || null); return { jobs: await API.myJobs() }; },
       ratings: async () => { await refreshMe(); const [score, myReviews] = await Promise.all([API.workerScorecard().catch(() => null), API.myReviews().catch(() => null)]); S.tier = DD().tierOf(score); return { score, myReviews }; },
       account: async () => (S.me && S.me.isAdmin ? { dev: await API.deviceStatus().catch(() => null) } : {}),
       profile: async () => ({ docs: await API.listDocs(S.me.profile.id).catch(() => []), myReviews: await API.myReviews().catch(() => null) }),
@@ -200,7 +200,7 @@
         if (sys === "improve") { const [stats, an, workers] = await Promise.all([API.adminStats(), API.adminAnalytics(30), API.adminWorkers()]); return { stats, an, workers }; }
         if (sys === "updates") return { activity: await API.adminActivity() };
         if (sys === "customers") return { customers: await API.adminCustomers() };
-        if (sys === "agents") { const [agents, pending, log, ov] = await Promise.all([API.adminAgents(), API.adminPendingApprovals(), API.adminAgentLog(50), API.adminAgentOverview().catch(() => null)]); return { agents, pending, log, ov }; }
+        if (sys === "agents") { const [agents, pending, log, ov] = await Promise.all([API.adminAgents(), API.adminPendingApprovals(), API.adminAgentLog(50), API.adminAgentOverview().catch(() => null)]); const money = await API.adminMoney().catch(() => null); return { agents, pending, log, ov, money }; }
         if (sys === "connectors") return { stats: await API.adminStats() };
         if (sys === "account") return { dev: S.me && S.me.isAdmin ? await API.deviceStatus().catch(() => null) : null };
         return {};
@@ -486,6 +486,16 @@
     const rate = heavy ? Number(CFG.DEEP_HOURLY) || 55 : Number(CFG.SUGGESTED_HOURLY) || 45;
     return { hours: h, rate, budget: Math.max(Number(CFG.MIN_JOB) || 120, Math.round((h * rate) / 5) * 5) };
   }
+  // Owner revenue (option 1): a service fee on top of the cleaner's price. Shown and charged only once card payments are on;
+  // the database computes the real fee on every request, so this is just the preview.
+  const feeOn = () => !!(S.pay && S.pay.payments_on);
+  const feeOf = (price) => { const fee = feeOn() ? Math.round(price * Number(S.pay.fee_pct || 0)) / 100 : 0; return { fee, total: price + fee }; };
+  const feeLines = (price) => {
+    if (!feeOn()) return "";
+    const x = feeOf(price);
+    return '<dl class="fee-lines"><dt>' + esc(t("fee_cleaner")) + "</dt><dd>" + money(price) + "</dd><dt>" + esc(t("fee_service", { p: Number(S.pay.fee_pct) })) + "</dt><dd>" + money2c(x.fee) + '</dd><dt class="tot">' + esc(t("fee_total")) + '</dt><dd class="tot">' + money2c(x.total) + "</dd></dl>";
+  };
+  const money2c = (n) => "$" + Number(n || 0).toFixed(2);
   // Collapsible sections for the booking form (native <details>). Open/closed state survives re-renders.
   // Sections are open by default unless the owner/customer closed them; "open = false" starts them closed.
   const secO = (k, label, open = false) => {
@@ -643,9 +653,9 @@
       '<div class="zip-map" id="addrMap">' + addrMapHtml(f) + "</div>" + "</div>" +
       secC + secO("when", t("sec_when")) + '<div class="card"><p class="label">' + esc(t("when")) + "</p>" + seg("urgency", [["scheduled", t("pick_date")], ["asap", t("asap")]], f.urgency) +
       (f.urgency === "scheduled" ? whenPicker(f) : "") + "</div>" +
-      secC + secO("details", t("sec_details") + " · $" + (f.budget || sg.budget), false) + '<div class="card"><div class="row2">' + field("hours_est", t("hours_est"), "number", 'step="0.5" min="0.5" max="200" inputmode="decimal"', null, f.hours_est || sg.hours) +
+      secC + secO("details", t("sec_details") + " · " + money(feeOf(Math.max(Number(f.budget) || 0, sg.budget)).total), false) + '<div class="card"><div class="row2">' + field("hours_est", t("hours_est"), "number", 'step="0.5" min="0.5" max="200" inputmode="decimal"', null, f.hours_est || sg.hours) +
       field("budget", t("price_label") + " ($)", "number", 'min="' + sg.budget + '" max="100000" inputmode="numeric"', null, Math.max(Number(f.budget) || 0, sg.budget)) + "</div>" +
-      '<p class="fine">' + esc(t("price_hint", { p: "$" + sg.budget, h: "$" + Math.round(Math.max(Number(f.budget) || 0, sg.budget) / sg.hours) })) + "</p></div>" +
+      '<p class="fine">' + esc(t("price_hint", { p: "$" + sg.budget, h: "$" + Math.round(Math.max(Number(f.budget) || 0, sg.budget) / sg.hours) })) + "</p>" + feeLines(Math.max(Number(f.budget) || 0, sg.budget)) + "</div>" +
       secC + secO("access", t("sec_access"), !!f.notes) +
       '<label class="field"><span>' + esc(t("notes")) + '</span><textarea name="notes" rows="3" maxlength="1000">' + esc(f.notes || "") + "</textarea></label>" +
       secC +
@@ -1253,6 +1263,13 @@
       if (a === "agcap") { const v = window.prompt(lang === "es" ? "Tope mensual de IA en dólares (0 = IA apagada)" : "Monthly AI cap in dollars (0 = AI off)", String(st.ai_monthly_cap_usd ?? 10)); if (v == null) return; cap = Math.max(0, Math.min(1000, Number(String(v).replace(/[^\d.]/g, "")) || 0)); }
       if (a === "agmsg") msg = !st.messaging_on;
       await run(() => API.adminSaveAgentSettings(cap, auto, null, msg), t("saved")).catch(() => {}); loadTab(true);
+    }
+    else if (a === "fee") {
+      const mo = S.data.money || {}, pct = el.dataset.k === "pct";
+      const v = window.prompt(pct ? (lang === "es" ? "Tarifa de servicio al cliente en % (0 a 30)" : "Client service fee in % (0 to 30)") : (lang === "es" ? "Tarifa de pago el mismo día en dólares (0 a 10)" : "Same-day payout fee in dollars (0 to 10)"), String(pct ? mo.fee_pct ?? 12 : mo.instant_fee ?? 1.99));
+      if (v == null) return; const n = Number(String(v).replace(/[^\d.]/g, ""));
+      if (!isFinite(n) || n < 0 || n > (pct ? 30 : 10)) { toast(lang === "es" ? "Número no válido" : "Not a valid number", "bad"); return; }
+      await run(() => API.adminSetFees(pct ? n : null, pct ? null : n), t("saved")).catch(() => {}); loadTab(true);
     }
     else if (a === "secall") { const o = el.dataset.open === "1"; S.secs = S.secs || {}; ["now", "contact", "what", "where", "when", "details", "access", "sugg"].forEach((k) => { S.secs[k] = o; }); render(); }
     else if (a === "agowner") {

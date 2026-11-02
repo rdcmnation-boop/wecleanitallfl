@@ -804,3 +804,4 @@ body.cleaner .dash{position:relative;min-height:100vh;min-height:100dvh}
 .now-sec{border:0;background:none}
 .ofold>summary .eyebrow{margin:0}
 .ofold>.card{margin:0 10px 10px;border:0;box-shadow:none;background:transparent;padding:4px 6px 10px}
+.fee-lines{display:grid;grid-template-columns:1fr auto;gap:6px 12px;margin:12px 0 0;font-size:15px}.fee-lines dd{margin:0;text-align:right}.fee-lines .tot{font-weight:800;color:var(--lime);border-top:1px solid rgba(255,255,255,.12);padding-top:6px}
