@@ -11,23 +11,73 @@ const env = (k: string, d = "") => Deno.env.get(k) ?? d;
 const SB = env("SUPABASE_URL").replace(/\/$/, "");
 const KEY = env("SUPABASE_SERVICE_ROLE_KEY");
 const sbHeaders = { apikey: KEY, Authorization: `Bearer ${KEY}`, "Content-Type": "application/json" };
-const APP = "https://www.wecleanitallfl.com/";
+const APP = env("APP_URL", "https://www.wecleanitallfl.com/");
 
-type Note = { id: number; user_id: string; channel: string; template: string; payload: Record<string, unknown> };
+type Note = { id: number; user_id: string; channel: string; template: string; payload: Record<string, unknown>; lang?: string };
+type P = Record<string, unknown>;
 
-const TEXT: Record<string, (p: Record<string, unknown>) => string> = {
-  job_offer: (p) => `We Clean It All: nuevo trabajo ${p.code} · ${p.service} · ${p.city || p.zip}${p.budget ? " · $" + p.budget : ""}. Abre la app para aceptar: ${APP}`,
-  booking_assigned: (p) => `We Clean It All: tu limpieza ${p.code} ya tiene limpiador asignado. Síguelo aquí: ${APP}`,
-  job_assigned: (p) => `We Clean It All: te asignaron el trabajo ${p.code}. Detalles: ${APP}`,
-  cleaner_on_way: (p) => `We Clean It All: tu limpiador va en camino (${p.code}). Síguelo en vivo: ${APP}`,
-  job_started: (p) => `We Clean It All: tu limpiador empezó a limpiar (${p.code}).`,
-  job_late_reminder: (p) => `We Clean It All: el trabajo ${p.code} ya debía empezar. Toca "Voy en camino" o avísale al cliente: ${APP}`,
-  booking_completed: (p) => `We Clean It All: tu limpieza ${p.code} está completa. ¡Califica tu servicio! ${APP}`,
-  booking_cancelled: (p) => `We Clean It All: el trabajo ${p.code} fue cancelado.`,
-  worker_approved: () => `We Clean It All: ¡tu cuenta fue aprobada! Ponte activo para recibir trabajos: ${APP}`,
-  agent_alert: (p) => `We Clean It All · ${p.agent}: ${p.title}`,
+const when = (p: P, lang: string) => p.urgency === "asap" || !p.scheduled_at ? (lang === "en" ? "as soon as possible" : "lo antes posible")
+  : new Date(String(p.scheduled_at)).toLocaleString(lang === "en" ? "en-US" : "es-US", { timeZone: "America/New_York", weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+const money = (v: unknown) => (v == null || v === "" ? "" : "$" + Number(v).toFixed(2));
+
+// [subject, text] per template and language. Spanish is the default; English when the profile says "en".
+const MSG: Record<string, { es: (p: P) => [string, string]; en: (p: P) => [string, string] }> = {
+  booking_received: {
+    es: (p) => [`Recibimos tu solicitud ${p.code}`, `We Clean It All: recibimos tu solicitud ${p.code} (${p.service}, ${when(p, "es")}${p.total ? ", total " + money(p.total) : ""}). Te avisamos cuando un limpiador la acepte. Síguela aquí: ${APP}`],
+    en: (p) => [`We received your request ${p.code}`, `We Clean It All: we received your request ${p.code} (${p.service}, ${when(p, "en")}${p.total ? ", total " + money(p.total) : ""}). We'll let you know when a cleaner accepts it. Track it here: ${APP}`],
+  },
+  booking_assigned: {
+    es: (p) => [`Tu limpieza ${p.code} tiene limpiador`, `We Clean It All: tu limpieza ${p.code} ya tiene limpiador asignado. Síguelo aquí: ${APP}`],
+    en: (p) => [`Your cleaning ${p.code} has a cleaner`, `We Clean It All: your cleaning ${p.code} now has a cleaner assigned. Follow it here: ${APP}`],
+  },
+  booking_reassigning: {
+    es: (p) => [`Estamos buscando otro limpiador (${p.code})`, `We Clean It All: tu limpiador ya no puede ir (${p.code}). Estamos buscando otro y te avisamos enseguida.`],
+    en: (p) => [`We're finding another cleaner (${p.code})`, `We Clean It All: your cleaner can no longer make it (${p.code}). We're finding another one and will update you shortly.`],
+  },
+  cleaner_on_way: {
+    es: (p) => [`Tu limpiador va en camino`, `We Clean It All: tu limpiador va en camino (${p.code}). Síguelo en vivo: ${APP}`],
+    en: (p) => [`Your cleaner is on the way`, `We Clean It All: your cleaner is on the way (${p.code}). Follow them live: ${APP}`],
+  },
+  job_started: {
+    es: (p) => [`Empezó tu limpieza`, `We Clean It All: tu limpiador empezó a limpiar (${p.code}).`],
+    en: (p) => [`Your cleaning started`, `We Clean It All: your cleaner started cleaning (${p.code}).`],
+  },
+  booking_completed: {
+    es: (p) => [`Tu limpieza ${p.code} está completa`, `We Clean It All: tu limpieza ${p.code} está completa. ¡Califica tu servicio! ${APP}`],
+    en: (p) => [`Your cleaning ${p.code} is done`, `We Clean It All: your cleaning ${p.code} is done. Please rate your service: ${APP}`],
+  },
+  booking_cancelled: {
+    es: (p) => [`Trabajo ${p.code} cancelado`, `We Clean It All: el trabajo ${p.code} fue cancelado.`],
+    en: (p) => [`Job ${p.code} cancelled`, `We Clean It All: job ${p.code} was cancelled.`],
+  },
+  job_offer: {
+    es: (p) => [`Nuevo trabajo ${p.code}`, `We Clean It All: nuevo trabajo ${p.code} · ${p.service} · ${p.city || p.zip}${p.budget ? " · $" + p.budget : ""}. Abre la app para aceptar: ${APP}`],
+    en: (p) => [`New job ${p.code}`, `We Clean It All: new job ${p.code} · ${p.service} · ${p.city || p.zip}${p.budget ? " · $" + p.budget : ""}. Open the app to accept: ${APP}`],
+  },
+  job_assigned: {
+    es: (p) => [`Te asignaron ${p.code}`, `We Clean It All: te asignaron el trabajo ${p.code}. Detalles: ${APP}`],
+    en: (p) => [`You were assigned ${p.code}`, `We Clean It All: you were assigned job ${p.code}. Details: ${APP}`],
+  },
+  job_late_reminder: {
+    es: (p) => [`El trabajo ${p.code} ya debía empezar`, `We Clean It All: el trabajo ${p.code} ya debía empezar. Toca "Voy en camino" o avísale al cliente: ${APP}`],
+    en: (p) => [`Job ${p.code} should have started`, `We Clean It All: job ${p.code} should have started. Tap "On my way" or let the customer know: ${APP}`],
+  },
+  worker_approved: {
+    es: () => [`¡Tu cuenta fue aprobada!`, `We Clean It All: ¡tu cuenta fue aprobada! Ponte activo para recibir trabajos: ${APP}`],
+    en: () => [`Your account is approved!`, `We Clean It All: your account is approved! Go active to receive jobs: ${APP}`],
+  },
+  agent_alert: {
+    es: (p) => [`Alerta: ${p.title}`, `We Clean It All · ${p.agent}: ${p.title}`],
+    en: (p) => [`Alert: ${p.title}`, `We Clean It All · ${p.agent}: ${p.title}`],
+  },
 };
-const text = (n: Note) => (TEXT[n.template] ?? (() => "We Clean It All"))(n.payload);
+export const render = (template: string, payload: P, lang = "es"): [string, string] => {
+  const m = MSG[template];
+  if (!m) return ["We Clean It All", "We Clean It All"];
+  return (lang === "en" ? m.en : m.es)(payload ?? {});
+};
+const text = (n: Note) => render(n.template, n.payload, n.lang)[1];
+const subject = (n: Note) => render(n.template, n.payload, n.lang)[0];
 
 const e164 = (raw: string) => {
   const d = (raw || "").replace(/\D/g, "");
@@ -99,7 +149,7 @@ async function sendEmail(email: string, n: Note): Promise<string> {
   if (!key || !from || !email) return "skip:no_email_keys";
   const r = await fetch("https://api.resend.com/emails", {
     method: "POST", headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ from, to: [email], subject: "We Clean It All", text: text(n) }),
+    body: JSON.stringify({ from, to: [email], subject: subject(n), text: text(n) }),
   });
   return r.ok ? "sent" : `fail:${r.status}`;
 }
@@ -110,8 +160,9 @@ Deno.serve(async (req) => {
   const notes: Note[] = q.ok ? await q.json() : [];
   const results: Record<string, number> = {};
   for (const n of notes) {
-    const pr = await fetch(`${SB}/rest/v1/profiles?id=eq.${n.user_id}&select=phone,email`, { headers: sbHeaders });
+    const pr = await fetch(`${SB}/rest/v1/profiles?id=eq.${n.user_id}&select=phone,email,language`, { headers: sbHeaders });
     const [prof] = pr.ok ? await pr.json() : [];
+    n.lang = prof?.language === "en" ? "en" : "es";
     const phone = e164(prof?.phone ?? "");
     let out = "skip:no_phone";
     if (n.channel === "whatsapp" && phone) {

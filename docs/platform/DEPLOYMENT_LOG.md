@@ -13,5 +13,12 @@ Approver "owner" = Rolando Castanon (RDCM), approval given in the Claude convers
 | 4 | 2026-11-02 | staging | **Duplicate booking guard** (`guard_duplicate_booking.sql`): same customer + service + ZIP + time within 10 min is refused | owner: "Verify duplicate bookings … are prevented" | 4 tests in the suite above | `drop trigger a4_guard_duplicate_booking` |
 | 5 | 2026-11-02 | branch `milestone1` | App: clear messages for duplicate booking, ZIP outside the area, market not open, service not offered, price too low (these used to show "something went wrong") | pending — goes live only with the production approval | `node --check` passes; browser check pending on the staging site | revert the commit |
 
+| 6 | 2026-11-02 | staging | **Customer notifications** (`customer_notifications.sql`): customers get email (or a text for guest bookings) for received / assigned / on the way / completed / cancelled / reassigning; new booking-received confirmation | owner: "Test … booking confirmations, and notifications" | Routing tests 11/11 PASS (rolled back) | re-apply previous `_notify` and `after_booking_insert` |
+| 7 | 2026-11-02 | staging | **notify function v1 on staging**: bilingual (es/en by profile), subject per message, `APP_URL` setting | same | Templates 29/29 (`test/notify_templates.test.mjs`); live call checks: no secret 403, wrong secret 403, correct secret 200 | redeploy previous version from git |
+
+## Not done yet — needs the owner
+- **Email keys**: Resend account, verify the domain wecleanitallfl.com (DNS records), then add `RESEND_API_KEY` and `EMAIL_FROM` as secrets on staging. Until then emails wait in the queue (tested).
+- **Sign-up / password-reset emails** come from Supabase Auth, not our code: set SMTP (Resend) and Site URL / Redirect URLs in the dashboard, on staging and production.
+
 ## Waiting for owner approval (production)
-- Orchestration engine v1 (entry 3), duplicate guard (4), app messages (5).
+- Orchestration engine v1 (entry 3), duplicate guard (4), app messages (5), customer notifications (6), notify v1 (7).
