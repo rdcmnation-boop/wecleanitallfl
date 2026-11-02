@@ -202,7 +202,7 @@
       return composer + reg + pend + log;
     }
 
-    const SYS = [["architecture", "grid"], ["improve", "spark"], ["agents", "list"], ["updates", "bell"], ["customers", "users"], ["connectors", "plug"], ["account", "user"]];
+    const SYS = [["architecture", "grid"], ["improve", "bulb"], ["agents", "list"], ["updates", "bell"], ["customers", "users"], ["connectors", "plug"], ["account", "user"]];
     function vSystem(views) {
       const cur = S.sys || "architecture", es = L();
       const names = { architecture: es ? "Arquitectura" : "Architecture", improve: es ? "Mejoras" : "Improvements", agents: es ? "Agentes" : "Agents", updates: es ? "Actualizaciones" : "Updates", customers: es ? "Clientes" : "Customers", connectors: t("tab_connectors"), account: t("tab_account") };
