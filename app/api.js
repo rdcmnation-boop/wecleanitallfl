@@ -210,6 +210,7 @@
       myJobs: () => rpc("my_jobs"),
       startJob: (id) => rpc("start_job", { p_booking: id }),
       completeJob: (id) => rpc("complete_job", { p_booking: id }),
+      shareLocation: (id, lat, lng) => rpc("share_location", { p_booking: id, p_lat: lat, p_lng: lng }),
       notifications: () => rest("/notifications?select=id,template,payload,created_at,read_at&channel=eq.inapp&order=created_at.desc&limit=30"),
       markRead: () => rpc("mark_notifications_read"),
       adminStats: () => rpc("admin_stats"),
@@ -486,6 +487,7 @@
           .map((b) => { const c = P(db, b.customer_id); const r = db.reviews.find((x) => x.booking_id === b.id); return Object.assign({}, b, { customer: { name: c.full_name, phone: c.phone }, review: r ? { rating: r.rating, comment: r.comment } : null }); });
       },
       async startJob(id) { const db = load(); const b = db.bookings.find((x) => x.id === id && x.worker_id === uid && x.status === "assigned"); need(b); b.status = "in_progress"; b.started_at = now(); save(db); },
+      async shareLocation(id, lat, lng) { const db = load(); const b = db.bookings.find((x) => x.id === id && x.worker_id === uid && x.status === "in_progress"); need(b, "not_allowed"); b.worker_lat = Number(lat.toFixed(5)); b.worker_lng = Number(lng.toFixed(5)); b.location_at = now(); save(db); },
       async completeJob(id) {
         const db = load(); const b = db.bookings.find((x) => x.id === id && x.worker_id === uid && ["assigned", "in_progress"].includes(x.status)); need(b);
         b.status = "completed"; b.completed_at = now(); W(db, uid).jobs_done++; note(db, b.customer_id, "booking_completed", { code: b.code }); save(db);

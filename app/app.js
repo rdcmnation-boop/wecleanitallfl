@@ -151,7 +151,7 @@
       cleaners: async () => ({ cleaners: await API.listWorkers(S.form.dirZip || "", S.form.dirSvc || "") }),
       book: async () => ({ cleaners: await API.listWorkers((S.form.book && S.form.book.zip) || "", (S.form.book && S.form.book.service) || "").catch(() => []) }),
       jobs: async () => { await refreshMe(); return { offers: S.me.worker && S.me.worker.status === "approved" ? await API.myOffers() : [] }; },
-      myjobs: async () => ({ jobs: await API.myJobs() }),
+      myjobs: async () => { const jobs = await API.myJobs(); const live = jobs.find((j) => j.status === "in_progress"); if (live) startSharing(live.id); else stopSharing(); return { jobs }; },
       earnings: async () => { await refreshMe(); return { jobs: await API.myJobs() }; },
       profile: async () => ({ docs: await API.listDocs(S.me.profile.id).catch(() => []) }),
       panel: async () => { const [stats, an] = await Promise.all([API.adminStats(), API.adminAnalytics(14)]); S.data.stats = stats; S.data.an = an; render(); const ai = await API.aiBriefing(lang); return { stats, an, ai }; },
@@ -348,7 +348,26 @@
       const b = el.querySelector(".tval"); if (b && b.textContent !== v) b.textContent = v;
     });
   };
-  setInterval(tickTimers, 1000);
+  const tickLoc = () => document.querySelectorAll("[data-since]").forEach((el) => {
+    const m = Math.floor((Date.now() - Date.parse(el.dataset.since)) / 60000);
+    const v = m < 1 ? t("loc_now") : t("loc_ago", { n: m }); if (el.textContent !== v) el.textContent = v;
+  });
+  setInterval(() => { tickTimers(); tickLoc(); }, 1000);
+  setInterval(() => { if (S.tab === "orders" && document.querySelector(".live-loc") && !S.data.loading) loadTab(true); }, 30000);
+  // Live location: the cleaner shares GPS only while a job is in progress (every ~30 s). Stops when the job ends.
+  let geoWatch = null, geoJob = null, geoLast = 0;
+  const stopSharing = () => { if (geoWatch != null && navigator.geolocation) navigator.geolocation.clearWatch(geoWatch); geoWatch = null; geoJob = null; geoLast = 0; };
+  const startSharing = (id) => {
+    if (!navigator.geolocation || geoJob === id) return;
+    stopSharing(); geoJob = id;
+    geoWatch = navigator.geolocation.watchPosition((pos) => {
+      const n = Date.now(); if (n - geoLast < 30000) return; geoLast = n;
+      API.shareLocation(id, pos.coords.latitude, pos.coords.longitude).catch((e) => console.error(e));
+    }, () => { toast(t("loc_denied"), "bad"); stopSharing(); }, { enableHighAccuracy: true, maximumAge: 15000, timeout: 60000 });
+  };
+  const liveLoc = (b) => b.status === "in_progress" && b.worker_lat != null
+    ? '<a class="btn ghost small live-loc" target="_blank" rel="noopener" href="https://www.google.com/maps?q=' + encodeURIComponent(b.worker_lat + "," + b.worker_lng) + '">' + icon("pin") + "<span>" + esc(t("see_live")) + '</span> · <small data-since="' + esc(b.location_at) + '">' + esc(t("loc_now")) + "</small></a>"
+    : "";
   const empty = (ic, title, sub, btn) => '<div class="empty">' + icon(ic, "xl") + "<h3>" + esc(title) + "</h3>" + (sub ? "<p>" + esc(sub) + "</p>" : "") + (btn || "") + "</div>";
 
   // ── customer: book ──
@@ -416,7 +435,7 @@
         '<div class="row between"><b class="code">' + esc(b.code) + "</b>" + status + "</div>" +
         "<h3>" + esc(svcName(b.service)) + "</h3>" +
         '<p class="meta">' + icon("clock") + esc(b.urgency === "asap" ? t("asap") : when(b.scheduled_at)) + " · " + icon("pin") + esc(b.city || b.zip) + "</p>" +
-        timeline(b.status) + jobTimer(b) + (b.status === "in_progress" ? jobMap(b) : "") +
+        timeline(b.status) + jobTimer(b) + liveLoc(b) + (b.status === "in_progress" ? jobMap(b) : "") +
         (b.status === "offered" ? '<p class="muted">' + esc(t("sent_to", { n: b.offers_sent })) + "</p>" : "") +
         (w ? '<div class="person"><div class="avatar">' + esc((w.name || "?")[0]) + "</div><div><small>" + esc(t("your_cleaner")) + "</small><b>" + esc(w.name) + "</b>" +
           (w.company_name ? "<small>" + esc(w.company_name) + "</small>" : "") + (w.rating_count ? '<small class="stars">' + stars(w.rating_avg) + " " + Number(w.rating_avg).toFixed(1) + "</small>" : "") + "</div></div>" +
@@ -521,7 +540,7 @@
       '<div class="row between"><b class="code">' + esc(b.code) + '</b><span class="pill st-' + b.status + '">' + esc(t("st_" + b.status)) + "</span></div>" +
       "<h3>" + esc(svcName(b.service)) + "</h3>" +
       '<p class="meta">' + icon("clock") + esc(b.urgency === "asap" ? t("asap") : when(b.scheduled_at)) + " · " + money(b.budget) + (b.hours_est ? " · " + b.hours_est + " h" : "") + "</p>" +
-      jobTimer(b) +
+      jobTimer(b) + (b.status === "in_progress" && geoJob === b.id ? '<p class="muted">' + esc(t("sharing_loc")) + "</p>" : "") +
       (b.status !== "completed" ? '<p class="addr">' + icon("pin") + "<span>" + esc([b.address, b.city, b.zip].filter(Boolean).join(", ")) + "</span></p>" + (b.status === "in_progress" ? jobMap(b) : "") : "") +
       (b.notes ? '<p class="bio">' + esc(b.notes) + "</p>" : "") +
       '<div class="person"><div class="avatar">' + esc((b.customer.name || "?")[0]) + "</div><div><small>" + esc(t("customer")) + "</small><b>" + esc(b.customer.name) + "</b></div></div>" +
@@ -752,7 +771,7 @@
     }
     else if (a === "decline") { await run(() => API.declineOffer(id)).catch(() => {}); loadTab(true); }
     else if (a === "start") { await run(() => API.startJob(id)).catch(() => {}); loadTab(true); }
-    else if (a === "complete") { await run(() => API.completeJob(id)).catch(() => {}); loadTab(true); }
+    else if (a === "complete") { stopSharing(); await run(() => API.completeJob(id)).catch(() => {}); loadTab(true); }
     else if (a === "wfilter") { S.filter = el.dataset.f; render(); }
     else if (a === "range") { S.range = Number(el.dataset.d); S.data.an = null; render(); loadTab(true); }
     else if (a === "sys") { S.tab = "system"; S.sys = el.dataset.s || "architecture"; store.set("wcia_tab_" + role(), "system"); S.data = {}; loadTab(); }
