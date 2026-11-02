@@ -402,6 +402,7 @@
   const secC = "</details>";
   // Brain assistants: customer (booking page), worker (my jobs) and owner (panel). One central function answers all three.
   function brainCard(role) {
+    if (API.mode !== "demo" && !CFG.BRAIN_ON) return ""; // hidden in live mode until the brain is switched on
     const log = (S.brain && S.brain[role]) || [];
     const title = role === "owner" ? t("brain_title_owner") : role === "worker" ? t("brain_title_worker") : t("brain_title_customer");
     return '<section class="card stack brain" aria-label="' + esc(title) + '"><p class="label">' + icon("spark") + esc(title) + "</p>" +
