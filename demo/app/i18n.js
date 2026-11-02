@@ -1,7 +1,7 @@
 // Text in Spanish and English. Keep words few and plain.
 window.WCIA_I18N = {
   es: {
-    radio_title: "Radio mientras trabajas", radio_hint: "Emisoras de Florida y Perú. Escúchalas aquí, dentro de la app.", radio_play: "Escuchar", radio_pause: "Pausar", radio_stop: "Parar",
+    radio_title: "Radio mientras trabajas", radio_hint: "Emisoras de Florida y Perú. Escúchalas aquí, dentro de la app.", radio_play: "Escuchar", radio_pause: "Pausar", radio_stop: "Parar", radio_open: "Abrir radio", radio_close: "Cerrar",
     radio_all: "Todo", radio_music: "Música", radio_live: "EN VIVO", radio_ready: "LISTO", radio_pick: "Elige una emisora", radio_prev: "Anterior", radio_next: "Siguiente", radio_pending: "Falta el enlace de transmisión", radio_loading: "Cargando emisoras…", radio_empty: "No hay emisoras disponibles ahora.", radio_load_fail: "No pudimos cargar las emisoras. Revisa tu conexión.", radio_fail_play: "Esta emisora no se pudo reproducir. Prueba otra.",
     today: "Hoy", next_visit: "Próxima visita", clock_label: "Hora local", timer_pause: "Pausar", timer_resume: "Seguir", timer_paused: "En pausa",
     news_title: "Noticias de limpieza", news_hint: "Fuentes de la industria. Cada nota muestra su fecha y su fuente.", news_source: "Fuente",
@@ -152,7 +152,7 @@ window.WCIA_I18N = {
     err_date_far: "Escoge una fecha dentro de los próximos 6 meses."
   },
   en: {
-    radio_title: "Radio while you work", radio_hint: "Florida and Perú stations. Listen right here in the app.", radio_play: "Listen", radio_pause: "Pause", radio_stop: "Stop",
+    radio_title: "Radio while you work", radio_hint: "Florida and Perú stations. Listen right here in the app.", radio_play: "Listen", radio_pause: "Pause", radio_stop: "Stop", radio_open: "Open radio", radio_close: "Close",
     radio_all: "All", radio_music: "Music", radio_live: "ON AIR", radio_ready: "READY", radio_pick: "Pick a station", radio_prev: "Previous", radio_next: "Next", radio_pending: "Stream link pending", radio_loading: "Loading stations…", radio_empty: "No stations available right now.", radio_load_fail: "We couldn't load the stations. Check your connection.", radio_fail_play: "This station couldn't play. Try another.",
     today: "Today", next_visit: "Next visit", clock_label: "Local time", timer_pause: "Pause", timer_resume: "Resume", timer_paused: "Paused",
     news_title: "Cleaning industry news", news_hint: "Industry sources. Each item shows its date and source.", news_source: "Source",

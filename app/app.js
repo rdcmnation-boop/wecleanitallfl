@@ -312,6 +312,7 @@
       analytics: () => owner().vAnalytics(), system: () => owner().vSystem({ connectors: () => strip(vConnectors()), account: () => strip(vAccount()) }) };
     return header(bell) + demoBanner() +
       '<main class="wrap app">' + (views[S.tab] ? views[S.tab]() : "") + "</main>" +
+      '<div id="radioSheetHost"></div>' + miniRadio() +
       '<nav class="tabbar n' + tabs.length + '" aria-label="Menu">' + tabs.map(([k, ic, lab]) =>
         '<button data-act="tab" data-tab="' + k + '"' + (S.tab === k ? ' aria-current="page" class="on"' : "") + ">" + icon(ic) + "<span>" + esc(t(lab)) + "</span></button>").join("") + "</nav>" + verifyModal() + reviewsModal();
   }
@@ -756,7 +757,11 @@
     return radioAudio;
   }
   const radioUsable = (s) => s && typeof s.url_resolved === "string" && /^https:\/\//.test(s.url_resolved) && /^(MP3|AAC|AAC\+|OGG)$/i.test(s.codec || "") && s.lastcheckok !== 0;
-  function refreshRadio() { const el = document.getElementById("radioCard"); if (el) el.outerHTML = radioCard(); }
+  // Every radio card (on the page and in the sheet) and the mini player redraw from the same state.
+  function refreshRadio() {
+    document.querySelectorAll(".radio-car").forEach((el) => { el.outerHTML = radioCard(!el.id); });
+    const m = document.getElementById("miniRadio"); if (m) m.outerHTML = miniRadio();
+  }
   async function loadRadio(reg) {
     if (reg !== radioState.region) { radioEl().pause(); radioState.idx = -1; radioState.playing = false; }
     radioState.region = reg; radioState.error = "";
@@ -797,7 +802,7 @@
     playRadio(ok[k]);
   }
   // Car-radio style card: neon screen with the station, equalizer, tuning dial, and transport buttons.
-  function radioCard() {
+  function radioCard(inSheet) {
     const reg = radioState.region, list = radioState.list[reg];
     if (list === undefined && !radioState.loading && !radioState.asked) { radioState.asked = true; setTimeout(() => loadRadio(reg), 0); }
     const regionBtns = Object.keys(RADIO).map((k) => '<button type="button" class="chip-btn' + (k === reg ? " on" : "") + '" data-act="radio-region" data-r="' + k + '">' + esc(RADIO[k].label) + "</button>").join("");
@@ -820,8 +825,24 @@
     else if (list && !list.length) body = '<p class="fine">' + esc(t("radio_empty")) + "</p>";
     else if (list) body = '<ul class="radio-list">' + list.map((s, i) => s.pending ? '<li><button type="button" class="radio-item pending" disabled><b>' + esc(s.name) + "</b><small>" + esc(t("radio_pending")) + "</small></button></li>" : '<li><button type="button" class="radio-item' + (i === radioState.idx ? " on" : "") + '" data-act="radio-play" data-i="' + i + '"><b>' + esc(s.name) + "</b><small>" +
       esc([s.state, s.codec, s.bitrate ? s.bitrate + " kbps" : ""].filter(Boolean).join(" · ")) + "</small></button></li>").join("") + "</ul>";
-    return '<section class="card stack radio-car" id="radioCard"><p class="label">' + icon("spark") + esc(t("radio_title")) + "</p><p class=\"fine\">" + esc(t("radio_hint")) + "</p>" +
+    return '<section class="card stack radio-car"' + (inSheet ? "" : ' id="radioCard"') + '><p class="label">' + icon("spark") + esc(t("radio_title")) + "</p><p class=\"fine\">" + esc(t("radio_hint")) + "</p>" +
       '<div class="chips radio-regions">' + regionBtns + genreBtns + "</div>" + screen + dial + controls + (radioState.error ? '<p class="fine bad-text">' + esc(radioState.error) + "</p>" : "") + body + "</section>";
+  }
+  // Mini player: a slim bar above the tabs on every screen. Tap the middle to open the full radio in a sheet.
+  function miniRadio() {
+    const list = radioState.list[radioState.region];
+    const cur = radioState.idx >= 0 && list && list[radioState.idx];
+    return '<div class="mini-radio' + (radioState.playing ? " live" : "") + '" id="miniRadio">' +
+      '<button type="button" class="mini-open" data-act="radio-open" aria-label="' + esc(t("radio_open")) + '">' +
+      '<span class="mini-eq' + (radioState.playing ? " on" : "") + '" aria-hidden="true"><i></i><i></i><i></i><i></i></span>' +
+      '<span class="mini-text"><b>' + esc(t("radio_title")) + "</b><small>" + esc(cur ? cur.name : t("radio_pick")) + "</small></span></button>" +
+      '<button type="button" class="mini-play" data-act="radio-mini-play" aria-label="' + esc(radioState.playing ? t("radio_pause") : t("radio_play")) + '">' + (radioState.playing ? "❚❚" : "▶") + "</button>" +
+      (cur ? '<button type="button" class="mini-stop" data-act="radio-stop" aria-label="' + esc(t("radio_stop")) + '">■</button>' : "") + "</div>";
+  }
+  function openRadioSheet() {
+    const host = document.getElementById("radioSheetHost");
+    if (host) host.innerHTML = '<div class="radio-sheet" role="dialog" aria-modal="true" aria-label="' + esc(t("radio_title")) + '"><div class="radio-sheet-panel">' +
+      '<button type="button" class="radio-sheet-close" data-act="radio-close" aria-label="' + esc(t("radio_close")) + '">✕</button>' + radioCard(true) + "</div></div>";
   }
   function vMyJobs() {
     const jobs = S.data.jobs;
@@ -1086,6 +1107,9 @@
     else if (a === "radio-region") { loadRadio(el.dataset.r); }
     else if (a === "radio-play") { playRadio(Number(el.dataset.i)); }
     else if (a === "radio-genre") { radioState.genre = el.dataset.g; radioEl().pause(); radioState.idx = -1; radioState.playing = false; delete radioState.list[radioState.region]; loadRadio(radioState.region); }
+    else if (a === "radio-open") { openRadioSheet(); }
+    else if (a === "radio-close") { const host = document.getElementById("radioSheetHost"); if (host) host.innerHTML = ""; }
+    else if (a === "radio-mini-play") { if (radioState.idx < 0) { openRadioSheet(); } else { const au = radioEl(); if (au.paused) au.play().catch(() => { radioState.error = t("radio_fail_play"); refreshRadio(); }); else au.pause(); } }
     else if (a === "radio-prev") { stepRadio(-1); }
     else if (a === "radio-next") { stepRadio(1); }
     else if (a === "radio-toggle") { if (radioState.idx < 0) { stepRadio(1); } else { const au = radioEl(); if (au.paused) au.play().catch(() => { radioState.error = t("radio_fail_play"); refreshRadio(); }); else au.pause(); } }
