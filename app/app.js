@@ -366,7 +366,7 @@
     }, () => { toast(t("loc_denied"), "bad"); stopSharing(); }, { enableHighAccuracy: true, maximumAge: 15000, timeout: 60000 });
   };
   const liveLoc = (b) => b.status === "in_progress" && b.worker_lat != null
-    ? '<a class="btn ghost small live-loc" target="_blank" rel="noopener" href="https://www.google.com/maps?q=' + encodeURIComponent(b.worker_lat + "," + b.worker_lng) + '">' + icon("pin") + "<span>" + esc(t("see_live")) + '</span> · <small data-since="' + esc(b.location_at) + '">' + esc(t("loc_now")) + "</small></a>"
+    ? '<span class="row gap wrap-row"><a class="btn ghost small live-loc" target="_blank" rel="noopener" href="https://www.google.com/maps?q=' + encodeURIComponent(b.worker_lat + "," + b.worker_lng) + '">' + icon("pin") + "<span>" + esc(t("see_live")) + '</span> · <small data-since="' + esc(b.location_at) + '">' + esc(t("loc_now")) + '</small></a><a class="btn ghost small" target="_blank" rel="noopener" href="https://earth.google.com/web/search/' + encodeURIComponent(b.worker_lat + "," + b.worker_lng) + '">Google Earth</a></span>'
     : "";
   const empty = (ic, title, sub, btn) => '<div class="empty">' + icon(ic, "xl") + "<h3>" + esc(title) + "</h3>" + (sub ? "<p>" + esc(sub) + "</p>" : "") + (btn || "") + "</div>";
 
@@ -669,7 +669,7 @@
     const bbox = [Math.min(...lngs) - 0.01, Math.min(...lats) - 0.01, Math.max(...lngs) + 0.01, Math.max(...lats) + 0.01].join(",");
     html += '<div class="job-map"><iframe title="' + esc(t("live_map")) + '" loading="lazy" src="https://www.openstreetmap.org/export/embed.html?bbox=' + bbox + "&layer=mapnik&marker=" + c.lat + "," + c.lng + '"></iframe></div>';
     html += jobs.map((j) => '<p class="row between"><span><b>' + esc(j.code) + "</b> · " + esc(j.worker || "") + ' · <small data-since="' + esc(j.location_at) + '">' + esc(t("loc_now")) + "</small></span>" +
-      '<a class="btn ghost small" target="_blank" rel="noopener" href="https://www.google.com/maps?q=' + encodeURIComponent(j.lat + "," + j.lng) + '">Google Maps</a></p>').join("");
+      '<span class="row gap"><a class="btn ghost small" target="_blank" rel="noopener" href="https://www.google.com/maps?q=' + encodeURIComponent(j.lat + "," + j.lng) + '">Google Maps</a><a class="btn ghost small" target="_blank" rel="noopener" href="https://earth.google.com/web/search/' + encodeURIComponent(j.lat + "," + j.lng) + '">Google Earth</a></span></p>').join("");
     return html + "</section>";
   }
 
