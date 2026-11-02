@@ -432,10 +432,11 @@
       secC + secO("details", t("sec_details") + " · $" + (f.budget || sg.budget), false) + '<div class="card"><div class="row2">' + field("hours_est", t("hours_est"), "number", 'step="0.5" min="0.5" max="200" inputmode="decimal"', null, f.hours_est || sg.hours) +
       field("budget", t("budget") + " ($)", "number", 'min="0" max="100000" inputmode="numeric"', null, f.budget || sg.budget) + "</div>" +
       '<p class="fine">' + esc(t("budget_hint")) + "</p></div>" +
+      secC + secO("access", t("sec_access"), !!f.notes) +
       '<label class="field"><span>' + esc(t("notes")) + '</span><textarea name="notes" rows="3" maxlength="1000">' + esc(f.notes || "") + "</textarea></label>" +
-      (pref ? '<div class="pref">' + icon("user") + "<span>" + esc(t("preferred")) + ": <b>" + esc(pref.display_name) + '</b></span><button type="button" class="x" data-act="clearpref" aria-label="' + esc(t("cancel")) + '">×</button></div>' : "") +
       secC +
-      (suggHtml ? secO("sugg", t("suggested"), false) + suggHtml + secC : "") +
+      (pref ?'<div class="pref">' + icon("user") + "<span>" + esc(t("preferred")) + ": <b>" + esc(pref.display_name) + '</b></span><button type="button" class="x" data-act="clearpref" aria-label="' + esc(t("cancel")) + '">×</button></div>' : "") +
+      (suggHtml ?secO("sugg", t("suggested"), false) + suggHtml + secC : "") +
       '<button class="btn solid block xl" type="submit">' + esc(t("send_request")) + "</button>" +
       '<p class="fine center">' + esc(t("privacy_note")) + "</p></form>";
   }
