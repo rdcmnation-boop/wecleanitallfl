@@ -153,7 +153,7 @@
       jobs: async () => { await refreshMe(); return { offers: S.me.worker && S.me.worker.status === "approved" ? await API.myOffers() : [] }; },
       myjobs: async () => { const jobs = await API.myJobs(); const live = jobs.find((j) => j.status === "in_progress"); if (live) startSharing(live.id); else stopSharing(); return { jobs }; },
       earnings: async () => { await refreshMe(); return { jobs: await API.myJobs() }; },
-      profile: async () => ({ docs: await API.listDocs(S.me.profile.id).catch(() => []) }),
+      profile: async () => ({ docs: await API.listDocs(S.me.profile.id).catch(() => []), myReviews: await API.myReviews().catch(() => null) }),
       panel: async () => { const [stats, an] = await Promise.all([API.adminStats(), API.adminAnalytics(14)]); S.data.stats = stats; S.data.an = an; render(); const ai = await API.aiBriefing(lang); return { stats, an, ai }; },
       analytics: async () => ({ an: await API.adminAnalytics(S.range || 30) }),
       system: async () => {
@@ -315,7 +315,7 @@
     return header(bell) + demoBanner() +
       '<main class="wrap app">' + (views[S.tab] ? views[S.tab]() : "") + "</main>" +
       '<nav class="tabbar n' + tabs.length + '" aria-label="Menu">' + tabs.map(([k, ic, lab]) =>
-        '<button data-act="tab" data-tab="' + k + '"' + (S.tab === k ? ' aria-current="page" class="on"' : "") + ">" + icon(ic) + "<span>" + esc(t(lab)) + "</span></button>").join("") + "</nav>" + verifyModal();
+        '<button data-act="tab" data-tab="' + k + '"' + (S.tab === k ? ' aria-current="page" class="on"' : "") + ">" + icon(ic) + "<span>" + esc(t(lab)) + "</span></button>").join("") + "</nav>" + verifyModal() + reviewsModal();
   }
   function renderBell() {
     const dot = $("#bell-dot"); if (!dot) return;
@@ -355,6 +355,19 @@
   document.addEventListener("toggle", (e) => { const d = e.target; if (d && d.matches && d.matches("details.sec[data-sec]")) { S.secs = S.secs || {}; S.secs[d.dataset.sec] = d.open; } }, true);
   setInterval(() => { tickTimers(); tickLoc(); }, 1000);
   setInterval(() => { if (S.tab === "orders" && document.querySelector(".live-loc") && !S.data.loading) loadTab(true); }, 30000);
+  // Reviews: summary, bars and the list. Used by the customer (any cleaner) and by the cleaner (own).
+  const reviewsPanel = (d) => {
+    if (!d) return '<p class="muted">…</p>';
+    const bars = [5, 4, 3, 2, 1].map((n) => { const c = (d.dist && d.dist[n]) || 0; const pct = d.count ? Math.round((c / d.count) * 100) : 0; return '<div class="bar-row"><span>' + n + '★</span><div class="bar"><i style="width:' + pct + '%"></i></div><small>' + c + "</small></div>"; }).join("");
+    const items = (d.items || []).map((r) => '<article class="rv"><div class="row between"><b>' + esc(r.name || "–") + "</b><small>" + esc(when(r.created_at)) + '</small></div><p class="stars">' + stars(r.rating) + "</p>" + (r.comment ? '<p class="bio">' + esc(r.comment) + "</p>" : "") + "</article>").join("");
+    return '<div class="rv-sum"><div class="big-avg">' + (d.count ? Number(d.avg).toFixed(1) : "–") + '</div><div><p class="stars">' + stars(d.avg) + '</p><small class="muted">' + esc(t("reviews_count", { n: d.count })) + "</small></div></div>" +
+      '<div class="bars">' + bars + "</div>" + (items || '<p class="muted">' + esc(t("reviews_none")) + "</p>");
+  };
+  function reviewsModal() {
+    const r = S.rv; if (!r) return "";
+    return '<div class="modal" role="dialog" aria-modal="true"><div class="modal-card stack rv-modal"><div class="row between"><p class="label">' + esc(r.name) + '</p><button type="button" class="x" data-act="rvclose" aria-label="' + esc(t("cancel")) + '">×</button></div>' + reviewsPanel(r.data) + "</div></div>";
+  }
+
   // Live location: the cleaner shares GPS only while a job is in progress (every ~30 s). Stops when the job ends.
   let geoWatch = null, geoJob = null, geoLast = 0;
   const stopSharing = () => { if (geoWatch != null && navigator.geolocation) navigator.geolocation.clearWatch(geoWatch); geoWatch = null; geoJob = null; geoLast = 0; };
@@ -464,6 +477,7 @@
       '<form class="row gap filters" data-form="dir"><input name="zip" inputmode="numeric" maxlength="5" placeholder="' + esc(t("search_zip")) + '" value="' + esc(S.form.dirZip || "") + '" aria-label="' + esc(t("search_zip")) + '">' +
       '<select name="svc" aria-label="' + esc(t("service")) + '"><option value="">' + esc(t("any_service")) + "</option>" + ALL_SERVICES.map((s) => '<option value="' + s + '"' + (S.form.dirSvc === s ? " selected" : "") + ">" + esc(svcName(s)) + "</option>").join("") + "</select>" +
       '<button class="btn solid small" type="submit">OK</button></form>' +
+      (/^\d{5}$/.test(S.form.dirZip || "") ? '<p><a class="btn ghost small" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(S.form.dirZip + " FL") + '">' + esc(t("zip_on_map")) + "</a></p>" : "") +
       (S.data.loading && !list ? loading() : !list || !list.length ? empty("users", t("no_cleaners")) :
         list.map((w) => '<article class="card cleaner"><div class="person"><div class="avatar">' + esc(w.display_name[0]) + "</div><div><b>" + esc(w.kind === "company" && w.company_name ? w.company_name : w.display_name) + "</b>" +
           (w.kind === "company" && w.company_name ? "<small>" + esc(w.display_name) + " · " + esc(t("team_size")) + ": " + w.team_size + "</small>" : "") +
@@ -473,7 +487,7 @@
           '<p class="tags">' + [t("years", { n: w.years_experience }), t("jobs", { n: w.jobs_done })].concat(w.has_insurance ? [t("insured")] : []).concat(w.has_equipment ? [t("own_equipment")] : [])
             .concat(w.covers_zip ? [t("covers_zip")] : []).map((x) => "<span>" + esc(x) + "</span>").join("") + "</p>" +
           '<p class="tags soft">' + w.services.map((s) => "<span>" + esc(svcName(s)) + "</span>").join("") + w.languages.map((l) => "<span>" + esc(t("lang_" + l)) + "</span>").join("") + "</p>" +
-          '<div class="row between"><b>' + (w.rate_type === "hourly" && w.hourly_rate ? money(w.hourly_rate) + esc(t("per_hour")) : "") + '</b><button class="btn solid small" data-act="prefer" data-id="' + w.id + '">' + esc(t("request_this")) + "</button></div></article>").join(""));
+          '<div class="row between"><b>' + (w.rate_type === "hourly" && w.hourly_rate ? money(w.hourly_rate) + esc(t("per_hour")) : "") + '</b><div class="row gap"><button class="btn ghost small" data-act="reviews" data-id="' + w.id + '" data-name="' + esc(w.company_name && w.kind === "company" ? w.company_name : w.display_name) + '">' + esc(t("reviews_btn")) + " (" + (w.rating_count || 0) + ')</button><button class="btn solid small" data-act="prefer" data-id="' + w.id + '">' + esc(t("request_this")) + "</button></div></div></article>").join(""));
   }
 
   // ── shared: account ──
@@ -575,6 +589,7 @@
     const w = S.me.worker, p = S.me.profile;
     const docs = S.data.docs || [];
     return '<h1 class="title">' + esc(t("tab_profile")) + "</h1>" + statusBanner(w) +
+      '<section class="card"><p class="label">' + esc(t("reviews_mine")) + "</p>" + reviewsPanel(S.data.myReviews) + "</section>" +
       '<form class="form stack" data-form="profile" novalidate>' +
       '<div class="card"><p class="label">' + esc(t("work_type")) + "</p>" + seg("kind", [["individual", t("individual")], ["company", t("company")]], w.kind) +
       (w.kind === "company" ? field("company_name", t("company_name"), "text", 'maxlength="120"', null, w.company_name) + field("team_size", t("team_size"), "number", 'min="1" max="500" inputmode="numeric"', null, w.team_size) : "") +
@@ -667,7 +682,7 @@
   // Owner-only live map: cleaners currently sharing location on jobs in progress, filtered by ZIP (empty = all).
   function liveMapCard() {
     const jobs = S.data.live;
-    let html = '<section class="card stack"><p class="label">' + icon("pin") + esc(t("live_map")) + '</p><form class="row gap" data-form="livemap"><input name="zip" inputmode="numeric" maxlength="5" placeholder="' + esc(t("search_zip")) + '" value="' + esc(S.form.liveZip || "") + '" aria-label="' + esc(t("search_zip")) + '"><button class="btn solid small" type="submit">OK</button></form>';
+    let html = '<section class="card stack"><p class="label">' + icon("pin") + esc(t("live_map")) + '</p><form class="row gap" data-form="livemap"><input name="zip" inputmode="numeric" maxlength="5" placeholder="' + esc(t("search_zip")) + '" value="' + esc(S.form.liveZip || "") + '" aria-label="' + esc(t("search_zip")) + '"><button class="btn solid small" type="submit">OK</button></form>' + (/^\d{5}$/.test(S.form.liveZip || "") ? '<p><a class="btn ghost small" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(S.form.liveZip + " FL") + '">' + esc(t("zip_on_map")) + "</a></p>" : "");
     if (!jobs) return html + '<p class="muted">' + esc(t("live_hint")) + "</p></section>";
     if (!jobs.length) return html + '<p class="muted">' + esc(t("live_none")) + "</p></section>";
     const lats = jobs.map((j) => j.lat), lngs = jobs.map((j) => j.lng), c = jobs[0];
@@ -755,6 +770,8 @@
       try { await API.guestStart(lang); S.me = await API.me(); startRole(); }
       catch (err) { console.error(err); S.authRole = "customer"; S.form.kind = "individual"; S.screen = "signup"; render(); } // guest not available: normal sign-up
     }
+    else if (a === "reviews") { S.rv = { name: el.dataset.name || "", data: null }; render(); try { S.rv.data = await API.workerReviews(el.dataset.id); } catch (err) { console.error(err); S.rv.data = { avg: 0, count: 0, dist: {}, items: [] }; } render(); }
+    else if (a === "rvclose") { S.rv = null; render(); }
     else if (a === "verifycancel") { S.verify = null; render(); }
     else if (a === "verifyback") { S.verify = Object.assign({}, S.verify, { step: "email" }); render(); }
     else if (a === "skipmfa") { S.skipMfa = true; S.mfa = null; startRole(); }

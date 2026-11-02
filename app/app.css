@@ -434,3 +434,13 @@ select{appearance:none;background-image:linear-gradient(45deg,transparent 50%,va
 .sec>.card,.sec>.seg,.sec>.chips,.sec>.field,.sec>.fine,.sec>.pref{margin-left:8px;margin-right:8px}
 .sec>.card:first-of-type{margin-top:0}
 .sec>summary:focus-visible{outline:2px solid var(--lime);outline-offset:-2px}
+
+/* Reviews */
+.rv-sum{display:flex;gap:14px;align-items:center;margin:6px 0 10px}
+.big-avg{font-size:40px;font-weight:800;color:var(--lime);line-height:1}
+.bars{display:grid;gap:6px;margin-bottom:8px}
+.bar-row{display:grid;grid-template-columns:34px 1fr 28px;gap:8px;align-items:center;font-size:13px}
+.bar{height:8px;background:rgba(255,255,255,.08);border-radius:8px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--lime)}
+.rv{border-top:1px solid rgba(255,255,255,.08);padding:10px 0}
+.rv-modal{max-height:85vh;overflow:auto}

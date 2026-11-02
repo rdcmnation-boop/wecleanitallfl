@@ -220,6 +220,8 @@
       adminWorkers: () => rpc("admin_workers"),
       adminBookings: () => rpc("admin_bookings"),
       adminLiveJobs: (zip) => rpc("admin_live_jobs", { p_zip: zip || "" }),
+      workerReviews: (id) => rpc("worker_reviews", { p_worker: id }),
+      myReviews: () => rpc("my_reviews"),
       adminSetWorkerStatus: (id, s) => rpc("admin_set_worker_status", { p_worker: id, p_status: s }),
       adminAssign: (b, w) => rpc("admin_assign", { p_booking: b, p_worker: w }),
       // Agent controls (owner only; the database enforces owner + 2-step).
@@ -300,6 +302,14 @@
       add("tasha@demo.wcia", "worker", "Tasha Brown", "9545550133", "en", { zips: ["33130", "33131", "33132", "33129"], services: ["standard", "airbnb", "windows"], languages: ["en"], years_experience: 3, rating_avg: 4.6, rating_count: 9, jobs_done: 14 });
       add("rosa@demo.wcia", "worker", "Rosa Jean", "9545550144", "ht", { zips: ["33301", "33312"], services: ["standard", "deep", "carpet"], languages: ["ht", "en", "es"], years_experience: 5, available: false, status: "pending", approved_at: null, rating_avg: 0, rating_count: 0, jobs_done: 0 });
       const cust = add("cliente@demo.wcia", "customer", "Ana Gomez", "9545550101", "es");
+      const rvC2 = add("laura@demo.wcia", "customer", "Laura Martin", "9545550155", "es");
+      const rvC3 = add("jose@demo.wcia", "customer", "Jose Ramirez", "9545550166", "es");
+      const rvId = (e) => db.users.find((u) => u.email === e).id;
+      const rvAdd = (w, c, rating, comment, days) => db.reviews.push({ id: uuid(), booking_id: uuid(), customer_id: c, worker_id: w, rating, comment, created_at: new Date(Date.now() - days * 864e5).toISOString() });
+      const rvM = rvId("maria@demo.wcia"), rvL = rvId("brillo@demo.wcia"), rvT = rvId("tasha@demo.wcia");
+      rvAdd(rvM, cust, 5, "Llegó puntual y dejó todo impecable.", 3); rvAdd(rvM, rvC2, 5, "Muy detallista, lo recomiendo.", 9); rvAdd(rvM, rvC3, 4, "La cocina quedó brillando.", 20);
+      rvAdd(rvL, rvC2, 5, "Llegaron con 6 personas y terminaron en 3 horas.", 5); rvAdd(rvL, rvC3, 4, "", 14);
+      rvAdd(rvT, cust, 5, "Great job, very friendly.", 2); rvAdd(rvT, rvC2, 4, "", 12);
       const b = { id: uuid(), code: "WC-" + db.seq++, customer_id: cust, segment: "residential", service: "deep", property_type: "Apartamento", bedrooms: 2, bathrooms: 2, sqft: null, frequency: "once", zip: "33308", city: "Fort Lauderdale", address: "123 Las Olas Blvd, Apt 4", urgency: "scheduled", scheduled_at: days(2), hours_est: 4, budget: 120, notes: "Hay un perro amigable.", preferred_worker_id: null, status: "requested", worker_id: null, created_at: now() };
       db.bookings.push(b);
       store.set(DBK, db);
@@ -312,6 +322,12 @@
     let uid = store.get(SK, null);
     const P = (db, id) => db.profiles.find((p) => p.id === id);
     const W = (db, id) => db.workers.find((w) => w.id === id);
+    const reviewSummary = (db, wid) => {
+      const rs = db.reviews.filter((r) => r.worker_id === wid).sort((a, b) => b.created_at.localeCompare(a.created_at));
+      const dist = {}; rs.forEach((r) => { dist[r.rating] = (dist[r.rating] || 0) + 1; });
+      const avg = rs.length ? Math.round((rs.reduce((s, r) => s + r.rating, 0) / rs.length) * 10) / 10 : 0;
+      return { avg, count: rs.length, dist, items: rs.slice(0, 50).map((r) => ({ rating: r.rating, comment: r.comment, created_at: r.created_at, name: (((db.profiles.find((p) => p.id === r.customer_id) || {}).full_name) || "").split(" ")[0] })) };
+    };
     const isAdmin = (db) => db.admins.includes(uid);
     const need = (cond, code) => { if (!cond) throw new ApiError(code || "not_allowed"); };
     const note = (db, user, template, payload) => {
@@ -488,6 +504,8 @@
           .map((b) => { const c = P(db, b.customer_id); const r = db.reviews.find((x) => x.booking_id === b.id); return Object.assign({}, b, { customer: { name: c.full_name, phone: c.phone }, review: r ? { rating: r.rating, comment: r.comment } : null }); });
       },
       async startJob(id) { const db = load(); const b = db.bookings.find((x) => x.id === id && x.worker_id === uid && x.status === "assigned"); need(b); b.status = "in_progress"; b.started_at = now(); save(db); },
+      async workerReviews(id) { await tick(); return reviewSummary(load(), id); },
+      async myReviews() { await tick(); return reviewSummary(load(), uid); },
       async adminLiveJobs(zip) { const db = load(); need(db.admins.includes(uid), "admin_only"); return db.bookings.filter((b) => b.status === "in_progress" && b.worker_lat != null && (!zip || b.zip === zip)).map((b) => ({ id: b.id, code: b.code, service: b.service, zip: b.zip, city: b.city, lat: b.worker_lat, lng: b.worker_lng, location_at: b.location_at, worker: (P(db, b.worker_id) || {}).full_name || "" })); },
       async shareLocation(id, lat, lng) { const db = load(); const b = db.bookings.find((x) => x.id === id && x.worker_id === uid && x.status === "in_progress"); need(b, "not_allowed"); b.worker_lat = Number(lat.toFixed(5)); b.worker_lng = Number(lng.toFixed(5)); b.location_at = now(); save(db); },
       async completeJob(id) {
