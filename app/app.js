@@ -425,7 +425,8 @@
       secC + secO("where", t("sec_where")) + '<div class="card"><div class="row2">' + field("zip", t("zip"), "text", 'required inputmode="numeric" pattern="[0-9]{5}" maxlength="5" autocomplete="postal-code"', null, f.zip || "") +
       field("city", t("city"), "text", 'maxlength="80" autocomplete="address-level2"', null, f.city || "") + "</div>" +
       '<div class="zip-map" id="zipMap">' + zipMapHtml(f.zip) + "</div>" +
-      field("address", t("address"), "text", 'maxlength="200" autocomplete="street-address"', t("address_private"), f.address || "") + "</div>" +
+      field("address", t("address"), "text", 'maxlength="200" autocomplete="street-address"', t("address_private"), f.address || "") +
+      '<div class="zip-map" id="addrMap">' + addrMapHtml(f) + "</div>" + "</div>" +
       secC + secO("when", t("sec_when")) + '<div class="card"><p class="label">' + esc(t("when")) + "</p>" + seg("urgency", [["scheduled", t("pick_date")], ["asap", t("asap")]], f.urgency) +
       (f.urgency === "scheduled" ? field("scheduled_at", t("date_time"), "datetime-local", 'min="' + localMin + '" required', null, f.scheduled_at || "") : "") + "</div>" +
       secC + secO("details", t("sec_details") + " · $" + (f.budget || sg.budget), false) + '<div class="card"><div class="row2">' + field("hours_est", t("hours_est"), "number", 'step="0.5" min="0.5" max="200" inputmode="decimal"', null, f.hours_est || sg.hours) +
@@ -918,6 +919,13 @@
       ? '<a class="btn ghost small" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(z + " FL") + '">' + esc(t("zip_on_map")) + "</a>"
       : "";
   }
+  // Route + distance link for the address. No origin is set, so Google Maps uses the device's own location when it opens.
+  function addrMapHtml(f) {
+    const a = String(f.address || "").trim();
+    if (a.length < 5) return "";
+    const dest = [a, f.city, f.zip, "FL"].filter(Boolean).join(", ");
+    return '<a class="btn ghost small" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(dest) + '&travelmode=driving">' + esc(t("addr_route")) + "</a>";
+  }
   function syncBook(form) {
     const d = formData(form);
     const f = S.form.book;
@@ -925,6 +933,8 @@
     ["bedrooms", "bathrooms", "sqft", "hours_est", "budget"].forEach((k) => { if (d[k] !== undefined) f[k] = d[k] === "" ? "" : Number(d[k]); });
     const zm = document.getElementById("zipMap");
     if (zm) zm.innerHTML = zipMapHtml(f.zip);
+    const am = document.getElementById("addrMap");
+    if (am) am.innerHTML = addrMapHtml(f);
   }
 
   root.addEventListener("submit", async (e) => {
