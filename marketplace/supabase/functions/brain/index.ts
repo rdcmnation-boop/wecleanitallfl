@@ -59,6 +59,11 @@ const CLEANING = [
   "Para el cliente: antes de la limpieza conviene recoger objetos de valor y la ropa del piso, avisar de mascotas, dejar agua y luz disponibles, y anotar accesos, códigos o zonas que no se tocan.",
   "Para el limpiador: llegar a tiempo y avisar de retrasos; no abrir gavetas personales ni usar cosas del cliente sin permiso; cuidar llaves y códigos; reportar daños u objetos rotos de inmediato a la empresa; no compartir datos del cliente; usar el temporizador y la ubicación que la app pide durante el trabajo.",
   "Para el dueño: hablar de precio por hora y por tamaño, capacidad de limpiadores, calidad, reseñas, retención de clientes y horarios. Usar solo las cifras que trae el contexto.",
+  "Cómo elegir la frecuencia: semanal o cada 2 semanas mantiene la casa al día; mensual sirve para mantenimiento; con mascotas, niños pequeños o muchas visitas suele pedirse más frecuencia. Si la casa lleva tiempo sin limpieza, una profunda al inicio hace que la regular dure más.",
+  "Antes de un primer servicio: el cliente debe anotar en la reserva accesos, códigos, mascotas y zonas que no se tocan. Si no estará en casa, debe confirmar con la empresa cómo se dará el acceso.",
+  "Buenas prácticas del limpiador: revisar la casa al llegar y anotar lo que falta antes de empezar; tomar fotos de antes y después si hay un reclamo; avisar a la empresa de cualquier cambio en el trabajo.",
+  "Para el dueño: ganar eficiencia agrupando trabajos por zona para reducir traslados; retener clientes con un servicio fijo; comparar horas reales contra las estimadas para ajustar el precio. Son ideas generales: usa solo las cifras del contexto.",
+  "Cómo responder: directo y con pasos concretos. Si el cliente pregunta por el precio final, explica que la app da una estimación y la empresa la confirma. Si no sabes algo, dilo y di a quién escribir.",
   "Reglas: no inventar precios, garantías, seguros, licencias, políticas de cancelación ni reembolsos; para eso escribe a wecleanitallfl@gmail.com. No pedir ni repetir teléfonos ni direcciones completas. Si no sabes algo, dilo y di a quién escribir.",
 ].join("\n");
 
@@ -115,7 +120,7 @@ Deno.serve(async (req) => {
       headers: { "x-api-key": key, "anthropic-version": "2023-06-01", "content-type": "application/json" },
       body: JSON.stringify({
         model: env("ANTHROPIC_MODEL", "claude-haiku-4-5"),
-        max_tokens: 400,
+        max_tokens: 700,
         system: PROMPTS[role] + "\n\n" + CLEANING + (notes ? "\n\nNOTAS APRENDIDAS (aprobadas por el dueño; úsalas si aplican):\n" + notes : "") + "\n\nDatos disponibles (JSON): " + ctx,
         messages: [{ role: "user", content: message }],
       }),
