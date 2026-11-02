@@ -394,7 +394,11 @@
     return { hours: h, budget: Math.round(h * (Number(CFG.SUGGESTED_HOURLY) || 30) / 5) * 5 };
   }
   // Collapsible sections for the booking form (native <details>). Open/closed state survives re-renders.
-  const secO = (k, label) => '<details class="sec" data-sec="' + k + '"' + (S.secs && S.secs[k] === false ? "" : " open") + '><summary>' + esc(label) + "</summary>";
+  // Sections are open by default unless the owner/customer closed them; "open = false" starts them closed.
+  const secO = (k, label, open = true) => {
+    const isOpen = S.secs && k in S.secs ? S.secs[k] : open;
+    return '<details class="sec" data-sec="' + k + '"' + (isOpen ? " open" : "") + '><summary>' + esc(label) + "</summary>";
+  };
   const secC = "</details>";
   function vBook() {
     const f = S.form.book || (S.form.book = { segment: "residential", service: "standard", bedrooms: 2, bathrooms: 1, frequency: "once", urgency: "scheduled" });
@@ -423,13 +427,13 @@
       field("address", t("address"), "text", 'maxlength="200" autocomplete="street-address"', t("address_private"), f.address || "") + "</div>" +
       secC + secO("when", t("sec_when")) + '<div class="card"><p class="label">' + esc(t("when")) + "</p>" + seg("urgency", [["scheduled", t("pick_date")], ["asap", t("asap")]], f.urgency) +
       (f.urgency === "scheduled" ? field("scheduled_at", t("date_time"), "datetime-local", 'min="' + localMin + '" required', null, f.scheduled_at || "") : "") + "</div>" +
-      secC + secO("details", t("sec_details")) + '<div class="card"><div class="row2">' + field("hours_est", t("hours_est"), "number", 'step="0.5" min="0.5" max="200" inputmode="decimal"', null, f.hours_est || sg.hours) +
+      secC + secO("details", t("sec_details") + " · $" + (f.budget || sg.budget), false) + '<div class="card"><div class="row2">' + field("hours_est", t("hours_est"), "number", 'step="0.5" min="0.5" max="200" inputmode="decimal"', null, f.hours_est || sg.hours) +
       field("budget", t("budget") + " ($)", "number", 'min="0" max="100000" inputmode="numeric"', null, f.budget || sg.budget) + "</div>" +
       '<p class="fine">' + esc(t("budget_hint")) + "</p></div>" +
       '<label class="field"><span>' + esc(t("notes")) + '</span><textarea name="notes" rows="3" maxlength="1000">' + esc(f.notes || "") + "</textarea></label>" +
       (pref ? '<div class="pref">' + icon("user") + "<span>" + esc(t("preferred")) + ": <b>" + esc(pref.display_name) + '</b></span><button type="button" class="x" data-act="clearpref" aria-label="' + esc(t("cancel")) + '">×</button></div>' : "") +
       secC +
-      (suggHtml ? secO("sugg", t("suggested")) + suggHtml + secC : "") +
+      (suggHtml ? secO("sugg", t("suggested"), false) + suggHtml + secC : "") +
       '<button class="btn solid block xl" type="submit">' + esc(t("send_request")) + "</button>" +
       '<p class="fine center">' + esc(t("privacy_note")) + "</p></form>";
   }
