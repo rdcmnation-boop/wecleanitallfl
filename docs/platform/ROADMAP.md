@@ -22,3 +22,9 @@
 | 10 | Robotics module: manufacturers, providers, fleets, models, capabilities, task eligibility, adapter interface, **labeled simulator**, safety/geofence/supervision, maintenance, pricing/commission, reporting | simulator only until a real vendor integration is verified |
 | 11 | PWA completion (push, offline-safe screens) + native iOS/Android (Expo), App Store / Google Play prep | Apple $99/yr, Google $25 once |
 | 12 | Testing, compliance review per market, staged launch (Palm Beach → Orlando → Tampa → other states) | |
+
+## Future capabilities (after the core)
+See `INNOVATION_ROADMAP.md`: Stage A Emergency Rescue Dispatch + Commercial Contract Intelligence; Stage B Digital Twin profiles + checklists/photos; Stage C AI quality flags, inventory, Green Earth reports (measured data only); Stage D robot zones, developer platform, vendor adapters.
+
+## Five company numbers
+Completed jobs · recurring revenue · customer satisfaction · provider earnings · robot utilization (real data only; simulated/predicted labeled).

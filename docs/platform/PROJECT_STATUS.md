@@ -44,6 +44,10 @@ _Mission: Humans + AI + Robotics — "Together, humans and AI can build a cleane
 | Dispatch modes per market: auto / hybrid / admin, plus pause | Built and tested | |
 | Owner functions: list markets, change status, checklist, dispatch settings, prices, tax, create market, coverage, provider type, candidates | Built (database); owner screen not yet built | |
 
+## 3b. Applied after approval (2026-11-02, 18:10 ET)
+- **Fix (HIGH):** providers who are no longer approved cannot act on assigned jobs (guard on bookings); suspension sends not-started jobs back to dispatch, notifies the customer, withdraws open offers, and alerts the owner about in-progress jobs. Applied to production with owner approval. **Verification test was started and interrupted — result not recorded; re-run pending.**
+- **Staging:** Supabase project `wcia-staging` (`elzpvlpeypkcsvywwebl`) created (free). Schema copy in progress: 1 of 24 migrations applied. Staging website not created yet.
+
 ## 4. Actual test results
 
 All database tests run against the live project inside a transaction that is rolled back on purpose (`RAISE EXCEPTION 'DRYRUN_RESULT …'`), so they leave no data.
