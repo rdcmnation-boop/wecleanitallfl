@@ -163,6 +163,12 @@
       adminBookings: () => rpc("admin_bookings"),
       adminSetWorkerStatus: (id, s) => rpc("admin_set_worker_status", { p_worker: id, p_status: s }),
       adminAssign: (b, w) => rpc("admin_assign", { p_booking: b, p_worker: w }),
+      // Agent controls (owner only; the database enforces owner + 2-step).
+      adminAgents: () => rest("/agent_registry?select=agent,role_description,max_class,status&order=agent"),
+      adminPendingApprovals: () => rpc("admin_pending_approvals"),
+      adminAgentLog: (n) => rpc("admin_agent_log", { p_limit: n || 50 }),
+      adminDecideApproval: (id, status, reason) => rpc("admin_decide_approval", { p_id: id, p_status: status, p_reason: reason || null }),
+      adminSetAgentStatus: (agent, status) => rpc("admin_set_agent_status", { p_agent: agent, p_status: status }),
       adminRedispatch: (b) => rpc("admin_redispatch", { p_booking: b }),
       async aiBriefing(lang) {
         try {
