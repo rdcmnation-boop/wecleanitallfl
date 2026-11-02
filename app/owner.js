@@ -183,7 +183,23 @@
       const log = '<section class="card"><p class="eyebrow">' + esc(tr("Agent activity (read-only)", "Actividad de agentes (solo lectura)")) + "</p>" +
         (d.log && d.log.length ? '<table class="tbl"><thead><tr><th>' + esc(tr("When", "Cuándo")) + "</th><th>" + esc(tr("Agent", "Agente")) + "</th><th>" + esc(tr("Action", "Acción")) + "</th><th>" + esc(tr("Class", "Clase")) + "</th></tr></thead><tbody>" +
           d.log.map((x) => "<tr><td>" + esc(when(x.created_at)) + "</td><td>" + esc(x.agent) + "</td><td>" + esc(x.action) + "</td><td>" + esc(x.approval_class) + "</td></tr>").join("") + "</tbody></table>" : '<p class="muted">' + esc(tr("No agent activity yet.", "Aún no hay actividad de agentes.")) + "</p>") + "</section>";
-      return reg + pend + log;
+      const ans = d.answer;
+      const answerHtml = (x) => {
+        if (x.error) return '<p class="muted">' + esc(x.error) + "</p>";
+        const rows = (x.results || []).map((r) => {
+          const state = r.ok
+            ? (r.verified ? tr("Done, verified", "Hecho, verificado") : tr("Done, not verified (no evidence)", "Hecho, sin verificar (sin evidencia)")) + (Array.isArray(r.result) ? " · " + r.result.length + " " + tr("items", "elementos") : "")
+            : tr("Not run: ", "No se ejecutó: ") + (r.reason === "owner_approval_required" ? tr("waiting for your approval below", "esperando tu aprobación abajo") : String(r.reason || ""));
+          return "<li><b>" + esc(r.agent + " → " + r.action) + "</b><br><span class=\"muted\">" + esc(state) + "</span></li>";
+        }).join("");
+        const logWarn = x.logErrors && x.logErrors.length ? '<p class="muted">' + esc(tr("Could not record " + x.logErrors.length + " entries.", "No se pudieron registrar " + x.logErrors.length + " entradas.")) + "</p>" : "";
+        return (rows ? "<ul>" + rows + "</ul>" : '<p class="muted">' + esc(tr("No agent matched that request.", "Ningún agente coincidió con esa petición.")) + "</p>") + logWarn;
+      };
+      const composer = '<section class="card"><p class="eyebrow">' + esc(tr("Ask the agents", "Pregunta a los agentes")) + "</p>" +
+        '<textarea id="agent-ask" rows="2" maxlength="500" placeholder="' + esc(tr("e.g. show unassigned bookings", "ej. muestra pedidos sin asignar")) + '"></textarea>' +
+        '<div class="row"><button class="btn small" data-act="ask">' + esc(tr("Run", "Ejecutar")) + "</button></div>" +
+        (ans ? answerHtml(ans) : "") + "</section>";
+      return composer + reg + pend + log;
     }
 
     const SYS = [["architecture", "grid"], ["improve", "spark"], ["agents", "spark"], ["updates", "bell"], ["customers", "users"], ["connectors", "plug"], ["account", "user"]];

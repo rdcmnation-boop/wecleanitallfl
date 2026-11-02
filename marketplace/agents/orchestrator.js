@@ -116,4 +116,5 @@ function createOrchestrator({ tools = {}, audit, approvals, now = () => Date.now
   return { plan, runTask, handle, registry: REGISTRY };
 }
 
-module.exports = { createOrchestrator, pickModel, REGISTRY, NEVER, CLASS_ORDER };
+if (typeof module !== 'undefined' && module.exports) module.exports = { createOrchestrator, pickModel, REGISTRY, NEVER, CLASS_ORDER };
+else if (typeof window !== 'undefined') window.WCIA_ORCH = { createOrchestrator, pickModel, REGISTRY, NEVER, CLASS_ORDER };

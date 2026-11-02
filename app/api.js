@@ -169,6 +169,8 @@
       adminAgentLog: (n) => rpc("admin_agent_log", { p_limit: n || 50 }),
       adminDecideApproval: (id, status, reason) => rpc("admin_decide_approval", { p_id: id, p_status: status, p_reason: reason || null }),
       adminSetAgentStatus: (agent, status) => rpc("admin_set_agent_status", { p_agent: agent, p_status: status }),
+      adminLogAgentAction: (agent, action, cls, hash, summary) => rpc("admin_log_agent_action", { p_agent: agent, p_action: action, p_class: cls, p_input_hash: hash || "", p_summary: summary || "" }),
+      adminRequestApproval: (agent, action, payload) => rpc("admin_request_approval", { p_agent: agent, p_action: action, p_payload: payload || {} }),
       adminRedispatch: (b) => rpc("admin_redispatch", { p_booking: b }),
       async aiBriefing(lang) {
         try {
@@ -411,6 +413,13 @@
       },
       async notifications() { const db = load(); return db.notes.filter((n) => n.user_id === uid && n.channel === "inapp").sort((a, b) => b.id - a.id).slice(0, 30); },
       async markRead() { const db = load(); db.notes.forEach((n) => { if (n.user_id === uid && !n.read_at) n.read_at = now(); }); save(db); },
+      async adminAgents() { return [{ agent: "operations", role_description: "Watches bookings, late jobs and open requests. Read-only.", max_class: "A", status: "paused" }]; },
+      async adminPendingApprovals() { return []; },
+      async adminAgentLog() { return []; },
+      async adminDecideApproval() {},
+      async adminSetAgentStatus() {},
+      async adminLogAgentAction() { return 1; },
+      async adminRequestApproval() { return "demo-approval"; },
       async adminStats() {
         await tick(); const db = load(); if (!isAdmin(db)) return null;
         const d30 = Date.now() - 30 * 864e5, recent = (t) => t && Date.parse(t) > d30;
