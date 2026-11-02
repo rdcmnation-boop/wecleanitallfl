@@ -208,7 +208,7 @@
   function publicScreen() {
     let body = "";
     if (S.screen === "landing") {
-      body = '<section class="hero"><p class="eyebrow">' + esc(t("hero_sub")) + "</p><h1>" + esc(t("hero_title")) + "</h1></section>" +
+      body = '<section class="hero"><img class="hero-logo" src="/media/logo-hero.png" width="150" height="123" alt="We Clean It All"><p class="eyebrow">' + esc(t("hero_sub")) + "</p><h1>" + esc(t("hero_title")) + "</h1></section>" +
         '<div class="comm-hero"><p class="eyebrow">' + esc(t("comm_eyebrow")) + '</p><p class="comm-slogan">' + esc(t("comm_slogan")) + '</p>' +
         '<div class="row"><a class="btn solid small" href="tel:+19543209303">' + esc(t("comm_call")) + '</a><a class="btn ghost small" href="/comercial/">' + esc(t("comm_quote")) + '</a></div></div>' +
         '<div class="big-choices">' +
@@ -216,7 +216,6 @@
         '<button class="big-choice" data-act="auth" data-role="worker">' + icon("broom", "lg") + "<span><b>" + esc(t("want_work")) + "</b><small>" + esc(t("want_work_sub")) + "</small></span></button>" +
         "</div>" +
         '<button class="link-btn center" data-act="signin">' + esc(t("have_account")) + "</button>" +
-        '<a class="biz-link" href="/comercial/">' + icon("building") + "<span><b>" + esc(t("biz_title")) + "</b><small>" + esc(t("biz_sub")) + "</small></span><i aria-hidden=\"true\">›</i></a>" +
         (API.mode === "demo" ? '<div class="demo-try"><span>' + esc(t("demo_try")) + ':</span><button class="pill" data-act="demo" data-kind="customer">' + esc(t("demo_customer")) +
           '</button><button class="pill" data-act="demo" data-kind="worker">' + esc(t("demo_worker")) + '</button><button class="pill" data-act="demo" data-kind="owner">' + esc(t("demo_owner")) + "</button></div>" : "");
     } else if (S.screen === "signup") {
