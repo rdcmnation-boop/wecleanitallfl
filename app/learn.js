@@ -1,8 +1,20 @@
 // Learning area: short lessons with quizzes for cleaners and owners, how-to guides for customers, and a supplies guide per service.
 // Educational text only. What each service includes exactly is confirmed by the company when booking.
 // Business topics are general information, not legal or insurance advice: confirm those with a professional.
+// Stores in the Sunrise (33351) area for price checks and rentals. Listed for comparison only; they are not partners.
+// Name, address and phone from Google Places. Hours change, so the app links to Google Maps for current hours.
+const NEARBY = [
+  { n: "Lowe's Home Improvement", a: "8050 W Oakland Park Blvd, Sunrise, FL 33351", tel: "+19545780246", map: "https://www.google.com/maps/search/?api=1&query=Lowe%27s+Sunrise+FL&query_place_id=ChIJfWCHbxQG2YgR8CXaJtEP_zc" },
+  { n: "The Home Depot", a: "2901 N University Dr, Sunrise, FL 33322", tel: "+19547478226", map: "https://www.google.com/maps/search/?api=1&query=The+Home+Depot+Sunrise+FL&query_place_id=ChIJ2WM5thUG2YgRjdfFF2V1BvU" },
+  { n: "The Home Depot", a: "12525 W Sunrise Blvd, Sunrise, FL 33323", tel: "+19548359379", map: "https://www.google.com/maps/search/?api=1&query=The+Home+Depot+12525+W+Sunrise+Blvd&query_place_id=ChIJdZh4f_wI2YgRxcoUOLO_0X4" },
+  { n: "Cleaning Depot Supply", a: "10412 W McNab Rd, Tamarac, FL 33321", tel: "+19545616352", map: "https://www.google.com/maps/search/?api=1&query=Cleaning+Depot+Supply+Tamarac+FL&query_place_id=ChIJO3NeJ1EG2YgRcSW5KjWU228" },
+  { n: "A Cleaning Supplies and Rentals", a: "1660 E Oakland Park Blvd, Oakland Park, FL 33334", tel: "+19545303551", map: "https://www.google.com/maps/search/?api=1&query=A+Cleaning+Supplies+and+Rentals+Oakland+Park+FL&query_place_id=ChIJZ_iZE4wB2YgRYqiLKW68hOg" },
+  { n: "Everlast Cleaning Equipment & Supplies", a: "6881 NW 16th Terrace, Fort Lauderdale, FL 33309", tel: "+18003995901", map: "https://www.google.com/maps/search/?api=1&query=Everlast+Cleaning+Equipment+Fort+Lauderdale+FL&query_place_id=ChIJS7BwP70G2YgRDCSJ67v9Ztk" },
+  { n: "Rex Rentals", a: "1921 S State Rd 7, Davie, FL 33317", tel: "+19545841800", map: "https://www.google.com/maps/search/?api=1&query=Rex+Rentals+Davie+FL&query_place_id=ChIJo-SAKFsH2YgRiQjjwkMj_NE" }
+];
 window.WCIA_LEARN = {
   es: {
+    nearby: NEARBY,
     // Sponsored partners (supply businesses). Empty until partner agreements exist. Each: { n: name, what: what they sell, url: https link }.
     partners: [],
     shop: [
@@ -104,6 +116,7 @@ window.WCIA_LEARN = {
     }
   },
   en: {
+    nearby: NEARBY,
     // Sponsored partners (supply businesses). Empty until partner agreements exist. Each: { n: name, what: what they sell, url: https link }.
     partners: [],
     shop: [
