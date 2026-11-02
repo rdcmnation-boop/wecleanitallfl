@@ -91,6 +91,32 @@
         if (r && r.access_token) { saveSession(r); return { confirmed: true }; }
         return { confirmed: false };
       },
+      // Guest = a real but anonymous Supabase user (no email). Same row-level security as any customer.
+      async guestStart(language) {
+        const r = await raw("/auth/v1/signup", { method: "POST", headers: { apikey: KEY, "Content-Type": "application/json" }, body: JSON.stringify({ data: { role: "customer", language: language || "es" } }) });
+        if (!r || !r.access_token) throw new ApiError("guest_unavailable");
+        saveSession(r);
+      },
+      // Human check before a request is sent: attach email + password to the guest; Supabase emails a confirmation (code or link).
+      async verifyStart(email, password) {
+        const t = await token();
+        await raw("/auth/v1/user", { method: "PUT", headers: { apikey: KEY, Authorization: "Bearer " + t, "Content-Type": "application/json" }, body: JSON.stringify({ email, password }) });
+      },
+      async verifyCode(email, code) {
+        const r = await raw("/auth/v1/verify", { method: "POST", headers: { apikey: KEY, "Content-Type": "application/json" }, body: JSON.stringify({ type: "email_change", email, token: String(code).replace(/\D/g, "") }) });
+        if (r && r.access_token) saveSession(r);
+      },
+      // Keep proof that the person accepted the terms (version + time) on their auth user. No schema change.
+      async recordConsent(version) {
+        const t = await token();
+        await raw("/auth/v1/user", { method: "PUT", headers: { apikey: KEY, Authorization: "Bearer " + t, "Content-Type": "application/json" }, body: JSON.stringify({ data: { consent_version: version, consent_at: new Date().toISOString() } }) });
+      },
+      // Turn the guest into a normal account (keeps their orders): attach email + password.
+      async upgradeGuest(email, password) {
+        const t = await token();
+        const r = await raw("/auth/v1/user", { method: "PUT", headers: { apikey: KEY, Authorization: "Bearer " + t, "Content-Type": "application/json" }, body: JSON.stringify({ email, password }) });
+        if (session && r && r.id) saveSession(Object.assign({}, session, { user: r, expires_in: 3600 }));
+      },
       async signIn({ email, password }) {
         const r = await raw("/auth/v1/token?grant_type=password", {
           method: "POST", headers: { apikey: KEY, "Content-Type": "application/json" }, body: JSON.stringify({ email, password })
@@ -120,7 +146,8 @@
         let worker = null;
         if (profile.role === "worker") { const w = await rest("/workers?select=*&id=eq." + profile.id); worker = w && w[0]; }
         if (isAdminAccount && !isAdmin && deviceToken()) store.del(DKEY); // expired/revoked secret: drop it, ask for the code
-        return { profile, worker, isAdmin: !!isAdmin, adminNeedsMfa: !!isAdminAccount && !isAdmin };
+        const isGuest = !!(session && session.user && session.user.is_anonymous);
+        return { profile, worker, isAdmin: !!isAdmin, adminNeedsMfa: !!isAdminAccount && !isAdmin, isGuest };
       },
       // 2-step verification (authenticator app) — required for owner powers.
       async mfaStatus() {
@@ -313,6 +340,30 @@
         const email = { customer: "cliente@demo.wcia", worker: "maria@demo.wcia", owner: "owner@demo.wcia" }[kind];
         uid = db.users.find((u) => u.email === email).id; store.set(SK, uid);
       },
+      async guestStart(language) {
+        const db = load(); const id = uuid();
+        db.users.push({ id, email: "guest-" + id + "@guest.wcia", password: "" });
+        db.profiles.push({ id, role: "customer", full_name: "", phone: "", email: "", language: language || "es", guest: true, created_at: now() });
+        save(db); uid = id; store.set(SK, uid);
+      },
+      async verifyStart(email, password) {
+        const db = load(); const p = P(db, uid); need(p && p.guest, "not_allowed");
+        need(!db.users.some((u) => u.email.toLowerCase() === String(email).toLowerCase()), "user_already_exists");
+        need(String(password).length >= 8, "weak_password");
+        store.set("wcia_demo_pending", { email, password });
+      },
+      async verifyCode(email, code) { // demo: the code is always 123456
+        const pend = store.get("wcia_demo_pending", null);
+        need(pend && pend.email === email && String(code).replace(/\D/g, "") === "123456", "invalid_code");
+        await this.upgradeGuest(pend.email, pend.password); store.del("wcia_demo_pending");
+      },
+      async recordConsent(version) { const db = load(); const p = P(db, uid); if (p) { p.consent = { version, at: now() }; save(db); } },
+      async upgradeGuest(email, password) {
+        const db = load(); const p = P(db, uid); need(p && p.guest, "not_allowed");
+        need(!db.users.some((u) => u.email.toLowerCase() === String(email).toLowerCase()), "user_already_exists");
+        const u = db.users.find((x) => x.id === uid); u.email = email; u.password = password;
+        p.email = email; delete p.guest; save(db);
+      },
       async demoReset() { store.del(DBK); store.del(SK); uid = null; },
       async signUp({ email, password, role, full_name, phone, language, kind, company_name }) {
         await tick(); const db = load();
@@ -335,7 +386,7 @@
       async me() {
         const db = load(); const profile = uid && P(db, uid);
         if (!profile) { uid = null; store.del(SK); return null; }
-        return { profile: Object.assign({}, profile), worker: W(db, uid) ? Object.assign({}, W(db, uid)) : null, isAdmin: isAdmin(db), adminNeedsMfa: false };
+        return { profile: Object.assign({}, profile), worker: W(db, uid) ? Object.assign({}, W(db, uid)) : null, isAdmin: isAdmin(db), adminNeedsMfa: false, isGuest: !!profile.guest };
       },
       async saveProfile(id, p) { const db = load(); need(id === uid); Object.assign(P(db, id), { full_name: p.full_name, phone: p.phone, language: p.language }); save(db); },
       async saveWorker(id, w) {

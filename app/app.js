@@ -149,6 +149,7 @@
     const loaders = {
       orders: async () => ({ orders: await API.myBookings() }),
       cleaners: async () => ({ cleaners: await API.listWorkers(S.form.dirZip || "", S.form.dirSvc || "") }),
+      book: async () => ({ cleaners: await API.listWorkers((S.form.book && S.form.book.zip) || "", (S.form.book && S.form.book.service) || "").catch(() => []) }),
       jobs: async () => { await refreshMe(); return { offers: S.me.worker && S.me.worker.status === "approved" ? await API.myOffers() : [] }; },
       myjobs: async () => ({ jobs: await API.myJobs() }),
       earnings: async () => { await refreshMe(); return { jobs: await API.myJobs() }; },
@@ -203,9 +204,11 @@
       '<button class="chip-btn" data-act="lang" aria-label="' + t("language") + '">' + (lang === "es" ? "EN" : "ES") + "</button></div></header>";
   }
   function demoBanner() {
-    return API.mode === "demo" ? '<div class="demo-banner">' + esc(t("demo_banner")) + "</div>" : "";
+    const guest = S.me && S.me.isGuest ? '<div class="guest-banner"><span>' + esc(t("guest_banner")) + '</span><button class="link-btn" data-act="tab" data-tab="account">' + esc(t("guest_save")) + "</button></div>" : "";
+    return (API.mode === "demo" ? '<div class="demo-banner">' + esc(t("demo_banner")) + "</div>" : "") + guest;
   }
 
+  const guestEnabled = () => API.mode === "demo" || !!CFG.GUEST_BOOKING;
   // public: landing / auth / new password
   function publicScreen() {
     let body = "";
@@ -214,7 +217,7 @@
         '<div class="comm-hero"><p class="eyebrow">' + esc(t("comm_eyebrow")) + '</p><p class="comm-slogan">' + esc(t("comm_slogan")) + '</p>' +
         '<div class="row"><a class="btn solid small" href="tel:+19543209303">' + esc(t("comm_call")) + '</a><a class="btn ghost small" href="/comercial/">' + esc(t("comm_quote")) + '</a></div></div>' +
         '<div class="big-choices">' +
-        '<button class="big-choice" data-act="auth" data-role="customer">' + icon("home", "lg") + "<span><b>" + esc(t("need_cleaning")) + "</b><small>" + esc(t("need_cleaning_sub")) + "</small></span></button>" +
+        '<button class="big-choice" data-act="' + (guestEnabled() ? "guest" : "auth") + '" data-role="customer">' + icon("home", "lg") + "<span><b>" + esc(t("need_cleaning")) + "</b><small>" + esc(t("need_cleaning_sub")) + "</small></span></button>" +
         '<button class="big-choice" data-act="auth" data-role="worker">' + icon("broom", "lg") + "<span><b>" + esc(t("want_work")) + "</b><small>" + esc(t("want_work_sub")) + "</small></span></button>" +
         "</div>" +
         '<button class="link-btn center" data-act="signin">' + esc(t("have_account")) + "</button>" +
@@ -286,6 +289,18 @@
   }
 
   // app shell
+  const LEGAL_VERSION = "2026-11-draft";
+  function verifyModal() {
+    const v = S.verify; if (!v) return "";
+    const demoHint = API.mode === "demo" ? '<p class="fine">' + esc(t("verify_demo_hint")) + "</p>" : "";
+    const body = v.step === "email"
+      ? '<p class="muted">' + esc(t("verify_sub")) + "</p>" + field("email", t("email"), "email", 'required autocomplete="email"') + field("password", t("password"), "password", 'required minlength="8" autocomplete="new-password"', t("pw_hint")) +
+        '<label class="consent"><input type="checkbox" name="consent" value="1"><span>' + esc(t("consent_a")) + ' <a href="/terms/" target="_blank" rel="noopener">' + esc(t("terms")) + '</a>, <a href="/privacy/" target="_blank" rel="noopener">' + esc(t("privacy")) + "</a> " + esc(t("consent_b")) + "</span></label>" +
+        '<button class="btn solid block" type="submit">' + esc(t("send_code")) + "</button>"
+      : '<p class="muted">' + esc(t("code_sent", { e: v.email })) + "</p>" + field("code", t("mfa_code"), "text", 'required inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" autofocus') + demoHint +
+        '<button class="btn solid block" type="submit">' + esc(t("verify_send")) + "</button>";
+    return '<div class="modal" role="dialog" aria-modal="true"><form class="modal-card stack" data-form="verify" novalidate><div class="row between"><p class="label">' + icon("shield") + esc(t("verify_title")) + '</p><button type="button" class="x" data-act="verifycancel" aria-label="' + esc(t("cancel")) + '">×</button></div>' + body + "</form></div>";
+  }
   function appShell() {
     const r = role();
     const tabs = TABS[r];
@@ -296,7 +311,7 @@
     return header(bell) + demoBanner() +
       '<main class="wrap app">' + (views[S.tab] ? views[S.tab]() : "") + "</main>" +
       '<nav class="tabbar n' + tabs.length + '" aria-label="Menu">' + tabs.map(([k, ic, lab]) =>
-        '<button data-act="tab" data-tab="' + k + '"' + (S.tab === k ? ' aria-current="page" class="on"' : "") + ">" + icon(ic) + "<span>" + esc(t(lab)) + "</span></button>").join("") + "</nav>";
+        '<button data-act="tab" data-tab="' + k + '"' + (S.tab === k ? ' aria-current="page" class="on"' : "") + ">" + icon(ic) + "<span>" + esc(t(lab)) + "</span></button>").join("") + "</nav>" + verifyModal();
   }
   function renderBell() {
     const dot = $("#bell-dot"); if (!dot) return;
@@ -331,8 +346,15 @@
     const pref = f.preferred_worker_id ? (S.data.cleaners || []).find((c) => c.id === f.preferred_worker_id) || S.form.prefCleaner : null;
     const minDate = new Date(Date.now() + 2 * 3600e3); minDate.setMinutes(0, 0, 0);
     const localMin = new Date(minDate.getTime() - minDate.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+    const guestCard = S.me.isGuest ? '<div class="card stack"><p class="label">' + icon("user") + esc(t("guest_contact")) + "</p>" +
+      field("g_name", t("full_name"), "text", 'required maxlength="120" autocomplete="name"', null, S.me.profile.full_name) +
+      field("g_phone", t("phone"), "tel", 'required inputmode="tel" maxlength="20" autocomplete="tel"', null, S.me.profile.phone) + "</div>" : "";
+    const sugg = (S.data.cleaners || []).filter((c) => !f.preferred_worker_id && (!f.service || (c.services || []).includes(f.service))).slice(0, 3);
+    const suggHtml = sugg.length ? '<div class="card"><p class="label">' + icon("users") + esc(t("suggested")) + '</p><div class="sugg">' + sugg.map((c) =>
+      '<div class="sugg-c"><span class="av">' + esc((c.display_name || "?")[0]) + '</span><span><b>' + esc(c.display_name) + "</b><small>★ " + esc(String(c.rating_avg || "–")) + " · " + esc(String(c.jobs_done || 0)) + " " + esc(t("jobs_done_short")) + "</small></span>" +
+      '<button type="button" class="btn ghost small" data-act="prefer" data-id="' + esc(c.id) + '">' + esc(t("pick")) + "</button></div>").join("") + "</div></div>" : "";
     return '<h1 class="title">' + esc(t("book_title")) + "</h1>" +
-      '<form class="form stack" data-form="book" novalidate>' +
+      '<form class="form stack" data-form="book" novalidate>' + guestCard +
       '<div class="seg big">' + [["residential", "home"], ["commercial", "building"]].map(([v, ic]) =>
         '<label class="seg-opt"><input type="radio" name="segment" value="' + v + '"' + (f.segment === v ? " checked" : "") + ">" + "<span>" + icon(ic) + esc(t(v)) + "</span></label>").join("") + "</div>" +
       chips("service", SERVICES[f.segment].map((s) => [s, svcName(s)]), [f.service]) +
@@ -350,6 +372,7 @@
       '<p class="fine">' + esc(t("budget_hint")) + "</p></div>" +
       '<label class="field"><span>' + esc(t("notes")) + '</span><textarea name="notes" rows="3" maxlength="1000">' + esc(f.notes || "") + "</textarea></label>" +
       (pref ? '<div class="pref">' + icon("user") + "<span>" + esc(t("preferred")) + ": <b>" + esc(pref.display_name) + '</b></span><button type="button" class="x" data-act="clearpref" aria-label="' + esc(t("cancel")) + '">×</button></div>' : "") +
+      suggHtml +
       '<button class="btn solid block xl" type="submit">' + esc(t("send_request")) + "</button>" +
       '<p class="fine center">' + esc(t("privacy_note")) + "</p></form>";
   }
@@ -412,6 +435,9 @@
   function vAccount() {
     const p = S.me.profile;
     return '<h1 class="title">' + esc(t("my_account")) + "</h1>" +
+      (S.me.isGuest ? '<form class="card form" data-form="upgrade" novalidate><p class="label">' + icon("shield") + esc(t("guest_save_title")) + '</p><p class="muted">' + esc(t("guest_save_sub")) + "</p>" +
+        field("email", t("email"), "email", 'required autocomplete="email"') + field("password", t("password"), "password", 'required minlength="8" autocomplete="new-password"') +
+        '<button class="btn solid block" type="submit">' + esc(t("guest_save")) + "</button></form>" : "") +
       '<form class="card form" data-form="account">' +
       '<p class="pill">' + esc(t("role_" + role())) + "</p>" +
       field("full_name", t("full_name"), "text", 'required maxlength="120" autocomplete="name"', null, p.full_name) +
@@ -665,6 +691,11 @@
     else if (a === "signin") { S.screen = "signin"; render(); }
     else if (a === "agentsall") { const off = ((S.data && S.data.agents) || []).filter((x) => x.status !== "active"); try { for (const x of off) await API.adminSetAgentStatus(x.agent, "active"); toast(t("saved")); } catch (err) { console.error(err); toast(t("error_generic"), "bad"); } loadTab(true); }
     else if (a === "devforget" || a === "devforgetall") { try { await API.revokeDevices(a === "devforgetall"); toast(t("saved")); } catch (err) { console.error(err); } loadTab(true); }
+    else if (a === "guest") {
+      try { await API.guestStart(lang); S.me = await API.me(); startRole(); }
+      catch (err) { console.error(err); S.authRole = "customer"; S.form.kind = "individual"; S.screen = "signup"; render(); } // guest not available: normal sign-up
+    }
+    else if (a === "verifycancel") { S.verify = null; render(); }
     else if (a === "skipmfa") { S.skipMfa = true; S.mfa = null; startRole(); }
     else if (a === "forgot") { S.screen = "forgot"; render(); }
     else if (a === "home") { S.screen = "landing"; render(); }
@@ -685,7 +716,7 @@
       S.form.prefCleaner = c;
       S.form.book = Object.assign(S.form.book || { segment: "residential", service: "standard", bedrooms: 2, bathrooms: 1, frequency: "once", urgency: "scheduled" }, { preferred_worker_id: id, zip: S.form.dirZip || (S.form.book && S.form.book.zip) || "" });
       if (c && !c.services.includes(S.form.book.service)) { S.form.book.service = c.services[0]; S.form.book.segment = SERVICES.residential.includes(c.services[0]) ? "residential" : "commercial"; }
-      S.tab = "book"; S.data = {}; render();
+      S.tab = "book"; S.data = {}; render(); loadTab(true);
     }
     else if (a === "cancel") {
       if (!confirm(t("confirm_cancel"))) return;
@@ -812,6 +843,13 @@
         const f = S.form.book;
         if (!/^\d{5}$/.test(f.zip || "")) { toast(t("zip_invalid"), "bad"); form.zip.focus(); return; }
         if (f.urgency === "scheduled" && !f.scheduled_at) { toast(t("date_needed"), "bad"); form.scheduled_at && form.scheduled_at.focus(); return; }
+        let guestInfo = null;
+        if (S.me.isGuest) {
+          const gn = String(d.g_name || "").trim(), gp = String(d.g_phone || "").trim();
+          if (gn.length < 2) { toast(t("guest_name_needed"), "bad"); form.g_name && form.g_name.focus(); return; }
+          if (digits(gp).length < 10) { toast(t("guest_phone_needed"), "bad"); form.g_phone && form.g_phone.focus(); return; }
+          guestInfo = { gn, gp };
+        }
         const res = f.segment === "residential";
         const row = {
           segment: f.segment, service: f.service, frequency: f.frequency, zip: f.zip, city: (f.city || "").trim(), address: (f.address || "").trim(),
@@ -821,11 +859,32 @@
           hours_est: Number(f.hours_est) || null, budget: f.budget === "" ? null : Number(f.budget), notes: (f.notes || "").trim(),
           preferred_worker_id: f.preferred_worker_id || null
         };
+        if (guestInfo) { S.verify = { step: "email", row, info: guestInfo, email: "" }; render(); return; } // human check first
         await run(() => API.createBooking(row));
         S.form.book = null; S.form.prefCleaner = null;
         toast(t("request_sent"), "ok");
         S.tab = "orders"; S.data = {}; loadTab();
         toast._later = setTimeout(() => { if (S.tab === "orders") toast(t("request_sent_sub"), "ok"); }, 2700);
+      } else if (kind === "verify") {
+        const v = S.verify; if (!v) return;
+        if (v.step === "email") {
+          if (!d.consent) { toast(t("consent_needed"), "bad"); return; }
+          if (String(d.password || "").length < 8) { toast(t("pw_short"), "bad"); return; }
+          await run(() => API.verifyStart(d.email.trim(), d.password));
+          try { await API.recordConsent(LEGAL_VERSION); } catch (err) { console.error(err); }
+          S.verify = Object.assign({}, v, { step: "code", email: d.email.trim() }); render();
+        } else {
+          await run(() => API.verifyCode(v.email, d.code));
+          S.me = await API.me();
+          if (S.me.isGuest) { toast(t("verify_wrong"), "bad"); return; }
+          await run(() => API.saveProfile(S.me.profile.id, { full_name: v.info.gn, phone: v.info.gp, language: lang }));
+          S.me.profile.full_name = v.info.gn; S.me.profile.phone = v.info.gp;
+          await run(() => API.createBooking(v.row));
+          S.verify = null; S.form.book = null; S.form.prefCleaner = null;
+          toast(t("request_sent"), "ok"); S.tab = "orders"; S.data = {}; loadTab();
+        }
+      } else if (kind === "upgrade") {
+        await run(() => API.upgradeGuest(d.email.trim(), d.password), t("saved")); S.me = await API.me(); loadTab(true);
       } else if (kind === "review") {
         if (!d.rating) { toast(t("rate_service"), "bad"); return; }
         await run(() => API.reviewBooking(form.dataset.id, Number(d.rating), d.comment), t("thanks_review")); loadTab(true);

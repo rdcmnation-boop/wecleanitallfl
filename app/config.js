@@ -5,6 +5,10 @@
 window.WCIA_CONFIG = {
   SUPABASE_URL: "https://fqajygzjteauxornipva.supabase.co",
   SUPABASE_ANON_KEY: "sb_publishable_29CglvTchKfNHjhNnQCkdA_MorPe_51",
+  // Let people book without an account (anonymous guest). Demo mode always allows it.
+  // Keep false in live mode until the guest limits in marketplace/supabase/guest_booking.sql are applied
+  // and "Allow anonymous sign-ins" is on in Supabase Auth.
+  GUEST_BOOKING: false,
   // Suggested hourly rate used only to pre-fill an estimate the customer can change.
   SUGGESTED_HOURLY: 30,
   // Owner contact shown to customers and cleaners.

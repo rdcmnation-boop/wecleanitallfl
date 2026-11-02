@@ -403,3 +403,18 @@ select{appearance:none;background-image:linear-gradient(45deg,transparent 50%,va
 .hero-logo{mix-blend-mode:screen;filter:none}
 .check{display:flex;gap:10px;align-items:flex-start;margin:4px 0 14px;font-size:14px;line-height:1.35;color:var(--muted)}
 .check input{width:20px;height:20px;min-width:20px;margin:1px 0 0;accent-color:var(--lime)}
+.guest-banner{display:flex;gap:10px;align-items:center;justify-content:space-between;padding:8px 16px;background:rgba(162,234,79,.1);border-bottom:1px solid rgba(162,234,79,.25);font-size:13px;color:var(--muted)}
+.guest-banner .link-btn{white-space:nowrap;font-size:13px}
+.sugg{display:flex;flex-direction:column;gap:8px}
+.sugg-c{display:flex;gap:10px;align-items:center}
+.sugg-c>span:nth-child(2){flex:1;display:flex;flex-direction:column;min-width:0}
+.sugg-c small{color:var(--muted)}
+.sugg-c .btn{padding:6px 14px;min-height:0;font-size:13px}
+.av{width:36px;height:36px;border-radius:50%;background:rgba(162,234,79,.18);color:var(--lime);display:inline-flex;align-items:center;justify-content:center;font:800 16px var(--display)}
+.modal{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.72);display:flex;align-items:flex-end;justify-content:center}
+.modal-card{width:100%;max-width:520px;max-height:92vh;overflow:auto;background:#0d1612;border:1px solid rgba(162,234,79,.3);border-radius:22px 22px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom))}
+.consent{display:flex;gap:12px;align-items:flex-start;font-size:14px;line-height:1.4;color:var(--muted);margin:2px 0 4px}
+.consent a{color:var(--lime);text-decoration:underline}
+.consent input{appearance:none;-webkit-appearance:none;flex:0 0 26px;width:26px;height:26px;margin:0;border-radius:7px;background:#fff;border:2px solid #fff;cursor:pointer;display:grid;place-items:center}
+.consent input:checked{background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2307120a' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E") center/18px no-repeat}
+.consent input:focus-visible{outline:3px solid var(--lime);outline-offset:2px}
