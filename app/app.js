@@ -214,14 +214,13 @@
     let body = "";
     if (S.screen === "landing") {
       body = '<section class="hero"><img class="hero-logo" src="/media/logo-hero.png" width="150" height="123" alt="We Clean It All"><p class="eyebrow">' + esc(t("hero_sub")) + '</p><h1 class="sr-only">We Clean It All</h1></section>' +
-        '<div class="comm-hero"><p class="eyebrow">' + esc(t("comm_eyebrow")) + '</p><p class="comm-slogan">' + esc(t("comm_slogan")) + '</p>' +
-        '<div class="row"><a class="btn solid small" href="/comercial/#contact">' + esc(t("comm_call")) + '</a><a class="btn ghost small" href="/comercial/#quote">' + esc(t("comm_quote")) + '</a></div></div>' +
         '<div class="big-choices">' +
         '<button class="big-choice" data-act="' + (guestEnabled() ? "guest" : "auth") + '" data-role="customer">' + icon("home", "lg") + "<span><b>" + esc(t("need_cleaning")) + "</b><small>" + esc(t("need_cleaning_sub")) + "</small></span></button>" +
         '<button class="big-choice" data-act="auth" data-role="worker">' + icon("broom", "lg") + "<span><b>" + esc(t("want_work")) + "</b><small>" + esc(t("want_work_sub")) + "</small></span></button>" +
         "</div>" +
         '<button class="link-btn center" data-act="signin">' + esc(t("have_account")) + "</button>" +
-        (API.mode === "demo" ? '<div class="demo-try"><span>' + esc(t("demo_try")) + ':</span><button class="pill" data-act="demo" data-kind="customer">' + esc(t("demo_customer")) +
+        '<a class="link-btn center" href="/comercial/">' + esc(t("comm_eyebrow")) + "</a>" +
+        (API.mode === "demo" ?'<div class="demo-try"><span>' + esc(t("demo_try")) + ':</span><button class="pill" data-act="demo" data-kind="customer">' + esc(t("demo_customer")) +
           '</button><button class="pill" data-act="demo" data-kind="worker">' + esc(t("demo_worker")) + '</button><button class="pill" data-act="demo" data-kind="owner">' + esc(t("demo_owner")) + "</button></div>" : "");
     } else if (S.screen === "signup") {
       const w = S.authRole === "worker";
