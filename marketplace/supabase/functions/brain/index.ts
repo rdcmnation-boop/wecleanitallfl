@@ -1,5 +1,5 @@
 // Brain: one central assistant with three roles (customer, worker, owner).
-// Secrets: ANTHROPIC_API_KEY (needed for AI replies), ANTHROPIC_MODEL (optional, default claude-haiku-5-5).
+// Secrets: ANTHROPIC_API_KEY (needed for AI replies), ANTHROPIC_MODEL (optional, default claude-haiku-4-5, same model as ai-ceo).
 // Without the key it answers { mode: "off" } and the app shows its built-in replies instead.
 // The caller must be signed in. A worker must really be a worker; the owner role needs is_admin().
 // The app sends only the context it is allowed to show that user (no other people's addresses or phones).
@@ -65,7 +65,7 @@ Deno.serve(async (req) => {
       method: "POST",
       headers: { "x-api-key": key, "anthropic-version": "2023-06-01", "content-type": "application/json" },
       body: JSON.stringify({
-        model: env("ANTHROPIC_MODEL", "claude-haiku-5-5"),
+        model: env("ANTHROPIC_MODEL", "claude-haiku-4-5"),
         max_tokens: 400,
         system: PROMPTS[role] + "\n\nDatos disponibles (JSON): " + ctx,
         messages: [{ role: "user", content: message }],
