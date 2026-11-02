@@ -489,3 +489,31 @@ select{appearance:none;background-image:linear-gradient(45deg,transparent 50%,va
 .now-go:active{transform:translateY(5px);box-shadow:0 2px 0 #3f7019,0 0 0 1px rgba(220,255,173,.6),0 8px 18px -10px rgba(162,234,79,.8)}
 .now-go .ic{width:20px;height:20px}
 @media (prefers-reduced-motion:reduce){.now-orb i,.now-kicker b{animation:none}.now-card,.now-card:hover{transform:none}}
+
+/* ── 3D futuristic layer (whole app) ──
+   Depth, a lit edge and a gentle tilt on top of the dark lime look. CSS only: no 3D engine, no extra downloads.
+   Tilt is for mouse users only, and motion is switched off for people who ask their device to reduce it. */
+.card,.tile{position:relative;transform-style:preserve-3d;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 22px 34px -26px rgba(0,0,0,.95),0 0 0 1px rgba(162,234,79,.035);
+  transition:transform .4s cubic-bezier(.2,.8,.2,1),box-shadow .4s ease,border-color .3s ease}
+.card::before,.tile::before{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;
+  background:linear-gradient(158deg,rgba(255,255,255,.075) 0%,rgba(255,255,255,0) 42%);transform:translateZ(0.5px)}
+@media (hover:hover){
+  .card:hover:not(:focus-within),.tile[role=button]:hover{transform:perspective(900px) rotateX(1.6deg) rotateY(-1.6deg) translateZ(3px);
+    border-color:rgba(162,234,79,.3);box-shadow:inset 0 1px 0 rgba(255,255,255,.1),0 30px 44px -24px rgba(0,0,0,1),0 0 30px -10px rgba(162,234,79,.35)}
+}
+.btn.solid{transition:transform .12s ease,box-shadow .12s ease;
+  box-shadow:0 6px 0 #3f7019,inset 0 1px 0 rgba(255,255,255,.55),0 16px 28px -12px rgba(162,234,79,.8),0 0 22px rgba(162,234,79,.25)}
+.btn.solid:active{transform:translateY(4px);
+  box-shadow:0 2px 0 #3f7019,inset 0 1px 0 rgba(255,255,255,.55),0 8px 16px -10px rgba(162,234,79,.8)}
+.btn.ghost{box-shadow:inset 0 0 0 1.5px rgba(162,234,79,.45),0 5px 0 rgba(0,0,0,.55)}
+.btn.ghost:active{transform:translateY(3px);box-shadow:inset 0 0 0 1.5px rgba(162,234,79,.45),0 2px 0 rgba(0,0,0,.55)}
+.chip input:checked+span{box-shadow:0 4px 0 #3f7019,0 0 14px rgba(162,234,79,.25)}
+.chip span,.seg-opt span{box-shadow:0 3px 0 rgba(0,0,0,.5)}
+.seg-opt input:checked+span{box-shadow:0 3px 0 #3f7019,0 0 18px rgba(162,234,79,.35)}
+.tabbar button .ic{transition:transform .25s cubic-bezier(.2,.8,.2,1)}
+.tabbar button.on .ic{transform:translateY(-3px) scale(1.1)}
+@media (prefers-reduced-motion:reduce){
+  .card,.tile,.btn,.chip span,.seg-opt span,.tabbar button .ic{transition:none}
+  .card:hover,.tile:hover,.tabbar button.on .ic{transform:none}
+}
