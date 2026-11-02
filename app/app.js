@@ -99,7 +99,9 @@
       not_approved: t("pending_title"), worker_not_approved: t("pending_title"),
       password: t("pw_hint"),
       too_many_open: t("err_too_many"), rate_limited: t("err_rate"), date_too_far: t("err_date_far"),
-      invalid_totp: t("mfa_wrong"), mfa: t("mfa_wrong")
+      invalid_totp: t("mfa_wrong"), mfa: t("mfa_wrong"),
+      price_too_low: t("price_too_low"), duplicate_booking: t("dup_booking"), not_in_service_area: t("not_in_area"),
+      market_not_open: t("market_closed"), service_not_offered_here: t("service_not_here")
     };
     return map[c] || t("error_generic");
   }
