@@ -400,6 +400,35 @@
     return '<details class="sec" data-sec="' + k + '"' + (isOpen ? " open" : "") + '><summary>' + esc(label) + "</summary>";
   };
   const secC = "</details>";
+  // Brain assistants: customer (booking page), worker (my jobs) and owner (panel). One central function answers all three.
+  function brainCard(role) {
+    const log = (S.brain && S.brain[role]) || [];
+    const title = role === "owner" ? t("brain_title_owner") : role === "worker" ? t("brain_title_worker") : t("brain_title_customer");
+    return '<section class="card stack brain" aria-label="' + esc(title) + '"><p class="label">' + icon("spark") + esc(title) + "</p>" +
+      '<div class="brain-log" aria-live="polite">' + (log.length ? log.map((m) => '<p class="brain-' + m.from + '">' + esc(m.text) + "</p>").join("") : '<p class="fine">' + esc(t("brain_hint")) + "</p>") + "</div>" +
+      '<form class="row gap" data-form="brain" data-role="' + role + '" novalidate><input name="message" maxlength="500" autocomplete="off" placeholder="' + esc(t("brain_ask")) + '"><button class="btn solid small" type="submit">' + esc(t("brain_send")) + "</button></form></section>";
+  }
+  // Only what that user is allowed to see goes to the brain: no addresses, phones or notes.
+  function brainContext(role) {
+    if (role === "owner") return { lang, stats: S.data.stats || null };
+    if (role === "worker") return { lang, jobs: (S.data.jobs || []).slice(0, 10).map((b) => ({ status: b.status, service: b.service, when: b.scheduled_at, zip: b.zip, budget: b.budget })) };
+    const f = (S.form && S.form.book) || {};
+    return { lang, booking: { segment: f.segment, service: f.service, frequency: f.frequency, zip: f.zip, urgency: f.urgency, bedrooms: f.bedrooms, bathrooms: f.bathrooms, budget: f.budget } };
+  }
+  async function brainAsk(form) {
+    const role = form.dataset.role, text = String(new FormData(form).get("message") || "").trim();
+    if (!text) return;
+    S.brain = S.brain || {};
+    const log = (S.brain[role] = S.brain[role] || []);
+    log.push({ from: "me", text }, { from: "bot", text: "…" });
+    render();
+    let res;
+    try { res = await API.askBrain(role, text, brainContext(role)); } catch (e) { res = { mode: "error" }; }
+    log.pop();
+    log.push({ from: "bot", text: res && res.reply ? res.reply : res && res.mode === "off" ? t("brain_off") : t("brain_error") });
+    if (log.length > 30) log.splice(0, log.length - 30);
+    render();
+  }
   function vBook() {
     const f = S.form.book || (S.form.book = { segment: "residential", service: "standard", bedrooms: 2, bathrooms: 1, frequency: "once", urgency: "scheduled" });
     const sg = suggest(f);
@@ -438,7 +467,7 @@
       (pref ?'<div class="pref">' + icon("user") + "<span>" + esc(t("preferred")) + ": <b>" + esc(pref.display_name) + '</b></span><button type="button" class="x" data-act="clearpref" aria-label="' + esc(t("cancel")) + '">×</button></div>' : "") +
       (suggHtml ?secO("sugg", t("suggested"), false) + suggHtml + secC : "") +
       '<button class="btn solid block xl" type="submit">' + esc(t("send_request")) + "</button>" +
-      '<p class="fine center">' + esc(t("privacy_note")) + "</p></form>";
+      '<p class="fine center">' + esc(t("privacy_note")) + "</p></form>" + brainCard("customer");
   }
 
   // ── customer: orders ──
@@ -561,7 +590,7 @@
     const jobs = S.data.jobs;
     if (S.data.loading && !jobs) return loading();
     if (!jobs || !jobs.length) return empty("check", t("no_jobs"));
-    return '<h1 class="title">' + esc(t("tab_myjobs")) + "</h1>" + jobs.map((b) => '<article class="card order">' +
+    return '<h1 class="title">' + esc(t("tab_myjobs")) + "</h1>" + brainCard("worker") + jobs.map((b) => '<article class="card order">' +
       '<div class="row between"><b class="code">' + esc(b.code) + '</b><span class="pill st-' + b.status + '">' + esc(t("st_" + b.status)) + "</span></div>" +
       "<h3>" + esc(svcName(b.service)) + "</h3>" +
       '<p class="meta">' + icon("clock") + esc(b.urgency === "asap" ? t("asap") : when(b.scheduled_at)) + " · " + money(b.budget) + (b.hours_est ? " · " + b.hours_est + " h" : "") + "</p>" +
@@ -650,7 +679,7 @@
       (an ? '<div class="hero-spark"><b>' + week + "</b><small>" + esc(lang === "es" ? "pedidos · 7 días" : "orders · 7 days") + "</small>" + owner().spark(an.series, "created") + "</div>" : "") + "</section>";
     const quick = '<div class="quick">' + [["analytics", "chart", t("tab_analytics")], ["system", "grid", lang === "es" ? "Arquitectura" : "Architecture", "architecture"], ["system", "spark", lang === "es" ? "Mejoras" : "Improvements", "improve"], ["system", "users", lang === "es" ? "Clientes" : "Customers", "customers"]]
       .map(([tb, ic, lb, sy]) => '<button class="q" data-act="' + (sy ? "sys" : "tab") + '" data-tab="' + tb + '" data-s="' + (sy || "") + '">' + icon(ic) + "<span>" + esc(lb) + "</span></button>").join("") + "</div>";
-    return hero + quick +
+    return hero + brainCard("owner") + quick +
       '<section class="ceo card"><div class="row between"><p class="eyebrow">' + icon("spark") + esc(t("ai_ceo")) + " · " + esc(t("ai_briefing")) + '</p><span class="pill">' + esc(S.data.ai ? t("ai_live") : t("ai_rules")) + "</span></div>" +
       '<ul class="brief">' + items.map((i) => '<li class="' + esc(i.level) + '"' + (i.tab ? ' data-act="tab" data-tab="' + i.tab + '" role="button" tabindex="0"' : "") + "><i></i><span>" + esc(i.text) + "</span></li>").join("") + "</ul></section>" +
       '<div class="tiles">' + tile(t("m_unmatched"), s.bookings_unmatched, s.bookings_unmatched ? "bad" : "", "bookings") + tile(t("m_pending"), s.workers_pending, s.workers_pending ? "warn" : "", "workers") +
@@ -941,6 +970,7 @@
   root.addEventListener("submit", async (e) => {
     e.preventDefault();
     const form = e.target, kind = form.dataset.form, d = formData(form);
+    if (kind === "brain") { await brainAsk(form); return; }
     const invalid = [...form.querySelectorAll("input[required]")].find((i) => !i.checkValidity());
     if (invalid && kind !== "dir") { invalid.focus(); invalid.reportValidity && invalid.reportValidity(); return; }
     try {

@@ -243,6 +243,16 @@
           return j.configured && j.items && j.items.length ? j.items : null;
         } catch (e) { return null; }
       },
+      // Central brain: one function, three roles (customer, worker, owner). See functions/brain.
+      async askBrain(role, message, context) {
+        try {
+          const t = await token();
+          if (!t) return { mode: "off" };
+          const r = await fetch(URL_ + "/functions/v1/brain", { method: "POST", headers: { apikey: KEY, Authorization: "Bearer " + t, "Content-Type": "application/json" }, body: JSON.stringify({ role, message, context }) });
+          if (!r.ok) return { mode: "error" };
+          return await r.json();
+        } catch (e) { return { mode: "error" }; }
+      },
       // Private documents bucket (storage.sql)
       async uploadDoc(uid, file) {
         const t = await token();
@@ -626,6 +636,28 @@
       },
       async adminRedispatch(bid) { const db = load(); need(isAdmin(db), "admin_only"); const n = dispatch(db, db.bookings.find((b) => b.id === bid)); save(db); return n; },
       async aiBriefing() { return null; },
+      // Demo brain: same three roles, answered with fixed rules (no AI key in demo mode).
+      async askBrain(role, message, context) {
+        const es = !context || context.lang !== "en", m = String(message || "").toLowerCase();
+        const has = (re) => re.test(m);
+        let reply;
+        if (role === "worker") {
+          reply = has(/ruta|llegar|direcc|route|address/) ? (es ? "Abre el trabajo y toca «Ver ruta y distancia en Google Maps». Google calcula la distancia desde donde estés." : "Open the job and tap “View route and distance on Google Maps”. Google calculates the distance from where you are.")
+            : has(/tiempo|timer|temporiz|iniciar|start/) ? (es ? "Toca «Iniciar» al llegar. El temporizador cuenta el tiempo de limpieza hasta que lo termines." : "Tap “Start” when you arrive. The timer counts cleaning time until you finish.")
+            : has(/document|doc|aprob|approv/) ? (es ? "Sube tus documentos en tu perfil. Un administrador los revisa antes de aprobarte." : "Upload your documents in your profile. An admin reviews them before approving you.")
+            : has(/rese|review|rating|calif/) ? (es ? "Tus reseñas aparecen arriba en tu perfil y solo muestran tu primer nombre." : "Your reviews show at the top of your profile, with only your first name.")
+            : (es ? "Puedo ayudarte con ruta, tiempo, documentos y reseñas." : "I can help with route, timer, documents and reviews.");
+        } else if (role === "owner") {
+          reply = has(/resumen|summary|hoy|today|estado|status|brief/) ? (es ? "Empieza por los pedidos sin limpiador y los limpiadores por aprobar: ahí está el dinero en riesgo." : "Start with orders without a cleaner and cleaners waiting for approval: that is where money is at risk.")
+            : (es ? "Activa la clave de Claude para un análisis completo. Mientras tanto, revisa Pedidos y Limpiadores." : "Turn on the Claude key for full analysis. Meanwhile, check Orders and Cleaners.");
+        } else {
+          reply = has(/precio|cuánto|cuanto|cost|price|\$/) ? (es ? "El precio sugerido depende de habitaciones, baños y servicio. Lo ves en «Detalles y precio» antes de enviar." : "The suggested price depends on rooms, bathrooms and service. You see it under “Details & price” before you send.")
+            : has(/cancel|cambiar|reembols|refund|change/) ? (es ? "Para cancelar, cambiar un pedido o pedir reembolso, escribe a wecleanitallfl@gmail.com." : "To cancel, change an order or ask for a refund, email wecleanitallfl@gmail.com.")
+            : has(/cuándo|cuando|fecha|hora|when|date|time/) ? (es ? "Elige «Pick a date» en Cuándo, o «As soon as possible» si quieres lo antes posible." : "Choose “Pick a date” under When, or “As soon as possible”.")
+            : (es ? "Puedo ayudarte con precios, fechas, servicios y tus pedidos." : "I can help with prices, dates, services and your orders.");
+        }
+        return { mode: "demo", reply };
+      },
       async uploadDoc(id, file) { const db = load(); (db.docs[id] = db.docs[id] || []).push({ name: file.name, path: "" }); save(db); },
       async listDocs(id) { return (load().docs[id] || []).slice(); },
       async docUrl() { return null; }
