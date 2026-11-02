@@ -73,7 +73,7 @@ button,input,select,textarea{font:inherit;color:inherit}
 .secret{display:block;padding:12px;border-radius:12px;background:#060c08;font:600 15px ui-monospace,monospace;letter-spacing:.08em;word-break:break-all;text-align:center;color:var(--lime-hot);user-select:all}
 
 /* app */
-.app{padding-top:18px;padding-bottom:calc(var(--tab-h) + 28px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:14px}
+.app{padding-top:18px;padding-bottom:calc(var(--tab-h) + 92px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:14px}
 .title{font-size:26px;font-weight:800;margin:4px 0 2px}
 .card{background:linear-gradient(170deg,var(--card-2),var(--card));border:1px solid var(--line-2);border-radius:var(--r);padding:16px;display:flex;flex-direction:column;gap:12px}
 .card h3{font-size:19px;font-weight:700}
@@ -549,6 +549,27 @@ select{appearance:none;background-image:linear-gradient(45deg,transparent 50%,va
 .bad-text{color:var(--bad)}
 
 /* Car-radio card for the radio (own design, in the app's black and lime green) */
+/* Mini player above the tabs, and the full radio sheet it opens (black and lime, like the rest of the app) */
+.mini-radio{position:fixed;left:50%;transform:translateX(-50%);width:min(640px,calc(100% - 20px));bottom:calc(var(--tab-h) + env(safe-area-inset-bottom) + 6px);z-index:31;display:flex;align-items:center;gap:10px;padding:8px 8px 8px 12px;border-radius:18px;background:rgba(8,16,11,.94);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border:1px solid rgba(162,234,79,.35);box-shadow:0 10px 30px -12px rgba(162,234,79,.55)}
+.mini-open{flex:1;min-width:0;display:flex;align-items:center;gap:10px;border:0;background:none;color:var(--text);text-align:left;cursor:pointer;padding:0}
+.mini-text{display:flex;flex-direction:column;gap:2px;min-width:0}
+.mini-text b{font:800 11px/1 var(--display);letter-spacing:.1em;text-transform:uppercase;color:var(--lime)}
+.mini-text small{font-size:13px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mini-eq{display:flex;align-items:flex-end;gap:2px;height:18px;flex:none}
+.mini-eq i{width:3px;height:5px;border-radius:2px;background:var(--lime);opacity:.45}
+.mini-eq.on i{opacity:1;animation:miniEq .8s ease-in-out infinite alternate}
+.mini-eq.on i:nth-child(2){animation-delay:-.3s}
+.mini-eq.on i:nth-child(3){animation-delay:-.6s}
+.mini-eq.on i:nth-child(4){animation-delay:-.15s}
+@keyframes miniEq{from{height:4px}to{height:18px}}
+.mini-play,.mini-stop{flex:none;width:42px;height:42px;border-radius:50%;border:0;cursor:pointer;display:grid;place-items:center;font:800 14px/1 var(--display);padding:0}
+.mini-play{color:var(--leaf);background:linear-gradient(180deg,#c9f78c,var(--lime) 45%,#86d23a);box-shadow:0 4px 0 #3f7019,0 0 16px rgba(162,234,79,.4)}
+.mini-stop{color:var(--text);background:#0c1610;box-shadow:inset 0 0 0 1px rgba(162,234,79,.3)}
+body.owner .mini-radio{display:none}
+.radio-sheet{position:fixed;inset:0;z-index:60;display:flex;align-items:flex-end;justify-content:center;background:rgba(0,0,0,.62);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+.radio-sheet-panel{position:relative;width:100%;max-width:640px;max-height:88vh;overflow-y:auto;padding:14px 14px calc(18px + env(safe-area-inset-bottom));border-radius:22px 22px 0 0;background:#030605;border-top:1px solid rgba(162,234,79,.35);box-shadow:0 -20px 50px -20px rgba(162,234,79,.35)}
+.radio-sheet-close{position:absolute;top:12px;right:12px;z-index:1;width:36px;height:36px;border-radius:50%;border:1px solid rgba(162,234,79,.35);background:#0c1610;color:var(--text);font:700 15px/1 var(--display);cursor:pointer;padding:0}
+.radio-sheet .radio-car{margin-top:30px}
 .radio-car{background:radial-gradient(120% 90% at 50% -20%,rgba(162,234,79,.16),transparent 60%),linear-gradient(170deg,#0c1610,#030605 70%);border-color:rgba(162,234,79,.38);box-shadow:0 26px 50px -30px rgba(162,234,79,.5),inset 0 1px 0 rgba(255,255,255,.07)}
 .car-screen{position:relative;overflow:hidden;display:flex;flex-direction:column;gap:4px;padding:16px 16px 14px;border-radius:18px;background:linear-gradient(180deg,#0c1610,#030605);box-shadow:inset 0 0 0 1px rgba(162,234,79,.35),inset 0 0 26px rgba(162,234,79,.1),0 0 24px -10px rgba(162,234,79,.55)}
 .car-screen::after{content:"";position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(180deg,rgba(255,255,255,.03) 0 1px,transparent 1px 3px)}
