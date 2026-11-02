@@ -436,6 +436,14 @@ select{appearance:none;background-image:linear-gradient(45deg,transparent 50%,va
 .brain-bot{align-self:flex-start;background:rgba(255,255,255,.06)}
 .brain form input{flex:1;min-width:0}
 .brain-mic{min-width:44px;justify-content:center;padding-inline:10px}
+.learn-steps{margin:0;padding-left:20px;display:grid;gap:6px;font-size:14px;line-height:1.4}
+.learn-q{display:grid;gap:8px;border-top:1px solid rgba(162,234,79,.15);padding-top:12px}
+.learn-opt{justify-content:flex-start;text-align:left;white-space:normal;height:auto;padding-block:8px}
+.learn-opt.ok{background:rgba(162,234,79,.22)}
+.learn-opt.bad{background:rgba(255,90,90,.18)}
+.sec ul{margin:6px 0 10px;padding-left:20px;font-size:14px}
+.shop li{margin:0 0 8px}
+.shop-links{display:block;font-size:13px;opacity:.85}
 .zip-map{margin:-4px 0 0}
 .zip-map:empty{display:none}
 .sec{border-radius:20px;border:1px solid rgba(162,234,79,.22);background:rgba(10,20,13,.6);overflow:hidden}

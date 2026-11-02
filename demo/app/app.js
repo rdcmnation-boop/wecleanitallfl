@@ -127,9 +127,9 @@
   }
   function role() { return !S.me ? null : S.me.isAdmin ? "admin" : S.me.profile.role; }
   const TABS = {
-    customer: [["book", "plus", "tab_book"], ["orders", "list", "tab_orders"], ["cleaners", "users", "tab_cleaners"], ["account", "user", "tab_account"]],
-    worker: [["jobs", "spark", "tab_jobs"], ["myjobs", "check", "tab_myjobs"], ["earnings", "cash", "tab_earnings"], ["profile", "user", "tab_profile"]],
-    admin: [["panel", "grid", "tab_panel"], ["analytics", "chart", "tab_analytics"], ["workers", "users", "tab_workers"], ["bookings", "list", "tab_bookings"], ["system", "spark", "tab_system"]]
+    customer: [["book", "plus", "tab_book"], ["orders", "list", "tab_orders"], ["cleaners", "users", "tab_cleaners"], ["account", "user", "tab_account"], ["learn", "spark", "tab_learn"]],
+    worker: [["jobs", "spark", "tab_jobs"], ["myjobs", "check", "tab_myjobs"], ["earnings", "cash", "tab_earnings"], ["profile", "user", "tab_profile"], ["learn", "spark", "tab_learn"]],
+    admin: [["panel", "grid", "tab_panel"], ["analytics", "chart", "tab_analytics"], ["workers", "users", "tab_workers"], ["bookings", "list", "tab_bookings"], ["system", "spark", "tab_system"], ["learn", "spark", "tab_learn"]]
   };
   function startRole() {
     S.screen = "app";
@@ -310,7 +310,7 @@
     const tabs = TABS[r];
     const bell = '<button class="bell" data-act="notes" aria-label="' + esc(t("notifications")) + '">' + icon("bell") + '<b class="dot" id="bell-dot" hidden></b></button>';
     const strip = (h) => h.replace(/^<h1 class="title">.*?<\/h1>/, "");
-    const views = { book: vBook, orders: vOrders, cleaners: vCleaners, account: vAccount, jobs: vJobs, myjobs: vMyJobs, earnings: vEarnings, profile: vProfile, panel: vPanel, workers: vWorkers, bookings: vAdminBookings, connectors: vConnectors,
+    const views = { book: vBook, orders: vOrders, cleaners: vCleaners, account: vAccount, jobs: vJobs, myjobs: vMyJobs, learn: vLearn, earnings: vEarnings, profile: vProfile, panel: vPanel, workers: vWorkers, bookings: vAdminBookings, connectors: vConnectors,
       analytics: () => owner().vAnalytics(), system: () => owner().vSystem({ connectors: () => strip(vConnectors()), account: () => strip(vAccount()) }) };
     return header(bell) + demoBanner() +
       '<main class="wrap app">' + (views[S.tab] ? views[S.tab]() : "") + "</main>" +
@@ -625,6 +625,43 @@
           (o.notes ? '<p class="bio">' + esc(o.notes) + "</p>" : "") +
           '<div class="row2"><button class="btn solid" data-act="accept" data-id="' + o.offer_id + '">' + icon("check") + esc(t("accept_job")) + '</button><button class="btn ghost" data-act="decline" data-id="' + o.offer_id + '">' + esc(t("decline")) + "</button></div></article>").join(""));
   }
+  // Learning area: lessons with quizzes (cleaners, owners, customers), health and workplace guides, and supplies per service.
+  function vLearn() {
+    const L = (window.WCIA_LEARN && (window.WCIA_LEARN[lang] || window.WCIA_LEARN.es)) || null;
+    if (!L) return '<h1 class="title">' + esc(t("learn_title")) + "</h1>";
+    const r = role();
+    const track = r === "worker" ? L.cleaner : r === "admin" ? L.owner : L.customer;
+    const list = (arr) => "<ul>" + arr.map((x) => "<li>" + esc(x) + "</li>").join("") + "</ul>";
+    const lessons = track.map((l) => '<section class="card stack learn"><p class="label">' + icon("spark") + esc(l.title) + "</p>" +
+      '<ol class="learn-steps">' + l.steps.map((s) => "<li>" + esc(s) + "</li>").join("") + "</ol>" +
+      (l.quiz ? l.quiz.map((q, qi) => learnQuiz(l.id, qi, q)).join("") : "") + "</section>").join("");
+    const kit = L.kit;
+    const kitHtml = '<section class="card stack"><p class="label">' + icon("list") + esc(t("learn_kit_title")) + "</p><p class=\"fine\">" + esc(t("learn_confirm")) + "</p>" +
+      Object.keys(kit.services).map((k) => {
+        const s = kit.services[k];
+        return '<details class="sec"><summary>' + esc(svcName(k)) + "</summary>" +
+          '<p class="label small">' + esc(t("learn_brings")) + "</p>" + list(kit.common.brings.concat(s.brings)) +
+          '<p class="label small">' + esc(t("learn_home")) + "</p>" + list(kit.common.home.concat(s.home)) + "</details>";
+      }).join("") + "</section>";
+    // Search links to compare prices and rentals. They open the store's search page; prices are not copied into the app.
+    const SHOP = [["Home Depot", (q) => "https://www.homedepot.com/s/" + encodeURIComponent(q)], ["Lowe's", (q) => "https://www.lowes.com/search?searchTerm=" + encodeURIComponent(q)], ["Google Shopping", (q) => "https://www.google.com/search?tbm=shop&q=" + encodeURIComponent(q)]];
+    const shopRows = (arr) => arr.map((x) => '<li><b>' + esc(x.n) + '</b><span class="shop-links">' + SHOP.map(([name, f]) => '<a href="' + esc(f(x.q)) + '" target="_blank" rel="noopener">' + esc(name) + "</a>").join(" · ") + "</span></li>").join("");
+    const shopHtml = '<section class="card stack"><p class="label">' + icon("cash") + esc(t("learn_shop_title")) + "</p><p class=\"fine\">" + esc(t("learn_shop_hint")) + "</p>" +
+      '<p class="label small">' + esc(t("learn_buy")) + "</p><ul class=\"shop\">" + shopRows(L.shop) + "</ul>" +
+      '<p class="label small">' + esc(t("learn_rent")) + "</p><ul class=\"shop\">" + shopRows(L.rent) + "</ul></section>";
+    return '<h1 class="title">' + esc(t("learn_title")) + "</h1>" + '<p class="fine">' + esc(t("learn_hint")) + "</p>" + lessons + kitHtml + shopHtml;
+  }
+  // One quiz question: tap an answer to check it; the right answer is marked and explained.
+  function learnQuiz(lid, qi, q) {
+    const key = lid + ":" + qi;
+    const pick = S.quiz && S.quiz[key] !== undefined ? S.quiz[key] : null;
+    const opts = q.o.map((o, oi) => {
+      const cls = pick === null ? "" : oi === q.a ? " ok" : oi === pick ? " bad" : "";
+      return '<button class="btn ghost small learn-opt' + cls + '" type="button" data-act="quiz" data-k="' + esc(key) + '" data-o="' + oi + '"' + (pick !== null ? " disabled" : "") + ">" + esc(o) + "</button>";
+    }).join("");
+    const fb = pick === null ? "" : '<p class="fine"><b>' + esc(pick === q.a ? t("learn_right") : t("learn_wrong")) + "</b> " + esc(q.why) + "</p>";
+    return '<div class="learn-q"><p><b>' + esc(q.q) + "</b></p>" + opts + fb + "</div>";
+  }
   function vMyJobs() {
     const jobs = S.data.jobs;
     if (S.data.loading && !jobs) return loading();
@@ -846,6 +883,7 @@
     }
     else if (a === "brainmic") brainListen(el.dataset.role);
     else if (a === "reviews") { S.rv = { name: el.dataset.name || "", data: null }; render(); try { S.rv.data = await API.workerReviews(el.dataset.id); } catch (err) { console.error(err); S.rv.data = { avg: 0, count: 0, dist: {}, items: [] }; } render(); }
+    else if (a === "quiz") { S.quiz = S.quiz || {}; S.quiz[el.dataset.k] = Number(el.dataset.o); render(); }
     else if (a === "rvclose") { S.rv = null; render(); }
     else if (a === "verifycancel") { S.verify = null; render(); }
     else if (a === "verifyback") { S.verify = Object.assign({}, S.verify, { step: "email" }); render(); }

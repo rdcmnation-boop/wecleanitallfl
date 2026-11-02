@@ -37,7 +37,7 @@ window.WCIA_I18N = {
     error_generic: "Algo salió mal. Intenta otra vez.",
     // tabs
     tab_book: "Pedir", tab_orders: "Mis pedidos", tab_cleaners: "Limpiadores", tab_account: "Cuenta",
-    tab_jobs: "Trabajos", tab_myjobs: "Mis trabajos", tab_earnings: "Ganancias", tab_profile: "Perfil",
+    tab_jobs: "Trabajos", tab_myjobs: "Mis trabajos", tab_earnings: "Ganancias", tab_learn: "Aprender", learn_title: "Aprender", learn_hint: "Lecciones cortas con práctica, guías de salud y equipo por servicio. Toca una respuesta para comprobarla.", learn_kit_title: "Equipo y suministros por servicio", learn_confirm: "Confirma con la empresa qué incluye cada servicio.", learn_brings: "Lo que suele traer el limpiador", learn_home: "Lo que conviene tener en casa", learn_right: "¡Correcto!", learn_wrong: "Casi.", learn_shop_title: "Dónde comparar precios y alquilar", learn_shop_hint: "Enlaces de búsqueda para comparar precios. Los precios cambian: revisa antes de comprar o alquilar.", learn_buy: "Comprar", learn_rent: "Alquilar", tab_profile: "Perfil",
     tab_panel: "Panel", tab_analytics: "Analítica", tab_system: "Sistema", tab_workers: "Limpiadores", tab_bookings: "Pedidos", tab_connectors: "Conectores",
     // booking
     book_title: "¿Qué necesitas limpiar?",
@@ -181,7 +181,7 @@ window.WCIA_I18N = {
     back: "Back", save: "Save", saved: "Saved", cancel: "Cancel", close: "Close", loading: "Loading…",
     error_generic: "Something went wrong. Try again.",
     tab_book: "Book", tab_orders: "My orders", tab_cleaners: "Cleaners", tab_account: "Account",
-    tab_jobs: "Jobs", tab_myjobs: "My jobs", tab_earnings: "Earnings", tab_profile: "Profile",
+    tab_jobs: "Jobs", tab_myjobs: "My jobs", tab_earnings: "Earnings", tab_learn: "Learn", learn_title: "Learn", learn_hint: "Short lessons with practice, health guides and equipment by service. Tap an answer to check it.", learn_kit_title: "Equipment and supplies by service", learn_confirm: "Confirm with the company what each service includes.", learn_brings: "What the cleaner usually brings", learn_home: "What's good to have at home", learn_right: "Correct!", learn_wrong: "Not quite.", learn_shop_title: "Where to compare prices and rent", learn_shop_hint: "Search links to compare prices. Prices change: check before buying or renting.", learn_buy: "Buy", learn_rent: "Rent", tab_profile: "Profile",
     tab_panel: "Panel", tab_analytics: "Analytics", tab_system: "System", tab_workers: "Cleaners", tab_bookings: "Orders", tab_connectors: "Connectors",
     book_title: "What needs cleaning?",
     residential: "Home", commercial: "Business",
