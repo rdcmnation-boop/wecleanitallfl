@@ -3,6 +3,8 @@
 // Without the key it answers { mode: "off" } and the app shows its built-in replies instead.
 // The caller must be signed in. A worker must really be a worker; the owner role needs is_admin().
 // The app sends only the context it is allowed to show that user (no other people's addresses or phones).
+// Learning: owner-approved notes (brain_notes, status "active") are added to the prompt, and customer and worker
+// questions are logged without contact details (brain_questions). brain-learn turns those into pending notes.
 
 const env = (k: string, d = "") => Deno.env.get(k) ?? d;
 
@@ -13,6 +15,36 @@ const CORS = {
 };
 const json = (o: unknown, status = 200) =>
   new Response(JSON.stringify(o), { status, headers: { ...CORS, "Content-Type": "application/json" } });
+
+// Learned notes the owner has approved (status "active") that this role may see. Read with the service role.
+// Only the text goes into the prompt; ids and other fields never leave the function.
+async function activeNotes(base: string, role: string): Promise<string> {
+  const key = env("SUPABASE_SERVICE_ROLE_KEY");
+  if (!key) return "";
+  const q = base + "/rest/v1/brain_notes?select=topic,note&status=eq.active&or=(scope.eq.all,scope.eq." + role + ")&order=created_at.desc&limit=30";
+  const r = await fetch(q, { headers: { apikey: key, Authorization: "Bearer " + key } }).catch(() => null);
+  if (!r || !r.ok) return "";
+  const rows: { topic: string; note: string }[] = await r.json();
+  return rows.map((n) => "- " + n.topic + ": " + n.note).join("\n").slice(0, 3000);
+}
+
+// Customer and worker questions, with email addresses, phone numbers and street addresses removed, kept for learning.
+// Owner questions are never logged. Logging never blocks or breaks a reply.
+function redact(s: string): string {
+  return s
+    .replace(/[\w.+-]+@[\w-]+\.[\w.-]+/g, "[correo]")
+    .replace(/\+?\d[\d\s().-]{6,}\d/g, "[teléfono]")
+    .replace(/\b\d{1,6}\s+(?:[NSEW]\.?\s+)?[\p{L}.'-]+(?:\s+[\p{L}.'-]+){0,3}\s+(?:St|Ave|Blvd|Dr|Rd|Way|Ln|Ct|Ter|Terrace|Pl|Street|Avenue|Road)\b\.?/giu, "[dirección]");
+}
+async function logQuestion(base: string, role: string, question: string, answered: boolean) {
+  const key = env("SUPABASE_SERVICE_ROLE_KEY");
+  if (!key || role === "owner") return;
+  await fetch(base + "/rest/v1/brain_questions", {
+    method: "POST",
+    headers: { apikey: key, Authorization: "Bearer " + key, "Content-Type": "application/json", Prefer: "return=minimal" },
+    body: JSON.stringify({ role, question: redact(question).slice(0, 500), answered }),
+  }).catch((e) => console.error("brain: log failed", String(e)));
+}
 
 // Cleaning knowledge shared by all three assistants. Facts about prices, policies or insurance are never invented here.
 const CLEANING = [
@@ -72,9 +104,10 @@ Deno.serve(async (req) => {
   }
 
   const key = env("ANTHROPIC_API_KEY");
-  if (!key) return json({ mode: "off" });
+  if (!key) { await logQuestion(base, role, message, false); return json({ mode: "off" }); }
 
   const ctx = JSON.stringify(body.context ?? {}).slice(0, 4000);
+  const notes = await activeNotes(base, role);
   let r: Response;
   try {
     r = await fetch("https://api.anthropic.com/v1/messages", {
@@ -83,22 +116,25 @@ Deno.serve(async (req) => {
       body: JSON.stringify({
         model: env("ANTHROPIC_MODEL", "claude-haiku-4-5"),
         max_tokens: 400,
-        system: PROMPTS[role] + "\n\n" + CLEANING + "\n\nDatos disponibles (JSON): " + ctx,
+        system: PROMPTS[role] + "\n\n" + CLEANING + (notes ? "\n\nNOTAS APRENDIDAS (aprobadas por el dueño; úsalas si aplican):\n" + notes : "") + "\n\nDatos disponibles (JSON): " + ctx,
         messages: [{ role: "user", content: message }],
       }),
     });
   } catch (e) {
     console.error("brain: anthropic fetch failed", String(e));
+    await logQuestion(base, role, message, false);
     return json({ mode: "error" }, 502);
   }
   if (!r.ok) {
     // Log the reason (never the key) so it can be read in the function logs.
     const detail = (await r.text()).slice(0, 300);
     console.error("brain: anthropic status", r.status, detail);
+    await logQuestion(base, role, message, false);
     return json({ mode: "error" }, 502);
   }
   const j = await r.json();
   const text = (j.content || []).filter((c: { type: string }) => c.type === "text")
     .map((c: { text: string }) => c.text).join("\n").trim();
+  await logQuestion(base, role, message, Boolean(text));
   return json({ mode: "ai", reply: text || null });
 });
