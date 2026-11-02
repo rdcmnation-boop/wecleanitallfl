@@ -209,6 +209,8 @@
     let body = "";
     if (S.screen === "landing") {
       body = '<section class="hero"><p class="eyebrow">' + esc(t("hero_sub")) + "</p><h1>" + esc(t("hero_title")) + "</h1></section>" +
+        '<div class="comm-hero"><p class="eyebrow">' + esc(t("comm_eyebrow")) + '</p><p class="comm-slogan">' + esc(t("comm_slogan")) + '</p>' +
+        '<div class="row"><a class="btn solid small" href="tel:+19543209303">' + esc(t("comm_call")) + '</a><a class="btn ghost small" href="/comercial/">' + esc(t("comm_quote")) + '</a></div></div>' +
         '<div class="big-choices">' +
         '<button class="big-choice" data-act="auth" data-role="customer">' + icon("home", "lg") + "<span><b>" + esc(t("need_cleaning")) + "</b><small>" + esc(t("need_cleaning_sub")) + "</small></span></button>" +
         '<button class="big-choice" data-act="auth" data-role="worker">' + icon("broom", "lg") + "<span><b>" + esc(t("want_work")) + "</b><small>" + esc(t("want_work_sub")) + "</small></span></button>" +

@@ -380,3 +380,7 @@ select{appearance:none;background-image:linear-gradient(45deg,transparent 50%,va
   body.owner .quick{max-width:640px}
 }
 @media (min-width:700px) and (max-width:959px){ body.owner .org-grid{grid-template-columns:1fr 1fr} }
+.comm-hero{text-align:center;margin:0 0 20px}
+.comm-slogan{font-weight:700;letter-spacing:.12em;text-transform:uppercase;font-size:13px;margin:6px 0 14px;color:var(--text)}
+.comm-hero .row{justify-content:center;flex-wrap:wrap;gap:10px}
+.comm-hero .eyebrow{justify-content:center}
