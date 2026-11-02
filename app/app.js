@@ -290,14 +290,18 @@
 
   // app shell
   const LEGAL_VERSION = "2026-11-draft";
+  const verifyChannel = () => (CFG.GUEST_VERIFY === "phone" ? "phone" : "email");
   function verifyModal() {
     const v = S.verify; if (!v) return "";
     const demoHint = API.mode === "demo" ? '<p class="fine">' + esc(t("verify_demo_hint")) + "</p>" : "";
+    const byEmail = verifyChannel() === "email";
     const body = v.step === "email"
-      ? '<p class="muted">' + esc(t("verify_sub")) + "</p>" + field("phone", t("phone"), "tel", 'required inputmode="tel" maxlength="20" autocomplete="tel"', null, v.info.gp) +
+      ? '<p class="muted">' + esc(t(byEmail ? "verify_sub_email" : "verify_sub")) + "</p>" +
+        (byEmail ? field("email", t("email"), "email", 'required inputmode="email" autocomplete="email"', null, v.info.ge || "") : "") +
+        field("phone", t("phone"), "tel", 'required inputmode="tel" maxlength="20" autocomplete="tel"', null, v.info.gp) +
         '<label class="consent"><input type="checkbox" name="consent" value="1"><span>' + esc(t("consent_a")) + ' <a href="/terms/" target="_blank" rel="noopener">' + esc(t("terms")) + '</a>, <a href="/privacy/" target="_blank" rel="noopener">' + esc(t("privacy")) + "</a> " + esc(t("consent_b")) + "</span></label>" +
-        '<button class="btn solid block" type="submit">' + esc(t("send_code")) + "</button>"
-      : '<p class="muted">' + esc(t("code_sent", { e: v.phone })) + "</p>" + field("code", t("mfa_code"), "text", 'required inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" autofocus') + demoHint +
+        '<button class="btn solid block" type="submit">' + esc(t(byEmail ? "send_code_email" : "send_code")) + "</button>"
+      : '<p class="muted">' + esc(t("code_sent", { e: v.contact })) + "</p>" + field("code", t("mfa_code"), "text", 'required inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" autofocus') + demoHint +
         '<button class="btn solid block" type="submit">' + esc(t("verify_send")) + '</button><button type="button" class="link-btn center" data-act="verifyback">' + esc(t("change_phone")) + "</button>";
     return '<div class="modal" role="dialog" aria-modal="true"><form class="modal-card stack" data-form="verify" novalidate><div class="row between"><p class="label">' + icon("shield") + esc(t("verify_title")) + '</p><button type="button" class="x" data-act="verifycancel" aria-label="' + esc(t("cancel")) + '">×</button></div>' + body + "</form></div>";
   }
@@ -871,11 +875,14 @@
         if (v.step === "email") {
           if (!d.consent) { toast(t("consent_needed"), "bad"); return; }
           if (digits(d.phone).length < 10) { toast(t("guest_phone_needed"), "bad"); return; }
-          await run(() => API.verifyStart(d.phone.trim()));
+          const byEmail = verifyChannel() === "email";
+          if (byEmail && !/^\S+@\S+\.\S+$/.test(String(d.email || "").trim())) { toast(t("email_needed"), "bad"); return; }
+          const contact = byEmail ? d.email.trim() : d.phone.trim();
+          await run(() => API.verifyStart(contact, verifyChannel()));
           try { await API.recordConsent(LEGAL_VERSION); } catch (err) { console.error(err); }
-          S.verify = Object.assign({}, v, { step: "code", phone: d.phone.trim(), info: Object.assign({}, v.info, { gp: d.phone.trim() }) }); render();
+          S.verify = Object.assign({}, v, { step: "code", channel: verifyChannel(), contact, info: Object.assign({}, v.info, { gp: d.phone.trim(), ge: byEmail ? contact : (v.info.ge || "") }) }); render();
         } else {
-          await run(() => API.verifyCode(v.phone, d.code));
+          await run(() => API.verifyCode(v.contact, d.code, v.channel));
           S.me = await API.me();
           if (S.me.isGuest) { toast(t("verify_wrong"), "bad"); return; }
           await run(() => API.saveProfile(S.me.profile.id, { full_name: v.info.gn, phone: v.info.gp, language: lang }));

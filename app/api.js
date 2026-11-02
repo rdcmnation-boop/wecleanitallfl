@@ -100,15 +100,23 @@
       },
       // Human check before a request is sent: confirm the PHONE (that is where WhatsApp updates go).
       // Supabase sends a code through the phone provider configured in Auth (Twilio). WhatsApp first, SMS as fallback.
-      async verifyStart(phone) {
+      // channel "email" (free, works now): a code to the email. Channel "phone": WhatsApp first, SMS fallback (needs Twilio).
+      async verifyStart(contact, channel) {
         const t = await token(); const h = { apikey: KEY, Authorization: "Bearer " + t, "Content-Type": "application/json" };
+        if (channel === "email") { await raw("/auth/v1/user", { method: "PUT", headers: h, body: JSON.stringify({ email: String(contact).trim() }) }); return String(contact).trim(); }
+        const phone = contact;
         const e164 = "+" + (digits(phone).length === 10 ? "1" : "") + digits(phone);
         try { await raw("/auth/v1/user", { method: "PUT", headers: h, body: JSON.stringify({ phone: e164, channel: "whatsapp" }) }); }
         catch (e) { await raw("/auth/v1/user", { method: "PUT", headers: h, body: JSON.stringify({ phone: e164 }) }); }
         return e164;
       },
-      async verifyCode(phone, code) {
-        const e164 = "+" + (digits(phone).length === 10 ? "1" : "") + digits(phone);
+      async verifyCode(contact, code, channel) {
+        if (channel === "email") {
+          const r = await raw("/auth/v1/verify", { method: "POST", headers: { apikey: KEY, "Content-Type": "application/json" }, body: JSON.stringify({ type: "email_change", email: String(contact).trim(), token: String(code).replace(/\D/g, "") }) });
+          if (r && r.access_token) saveSession(r);
+          return;
+        }
+        const e164 = "+" + (digits(contact).length === 10 ? "1" : "") + digits(contact);
         const r = await raw("/auth/v1/verify", { method: "POST", headers: { apikey: KEY, "Content-Type": "application/json" }, body: JSON.stringify({ type: "phone_change", phone: e164, token: String(code).replace(/\D/g, "") }) });
         if (r && r.access_token) saveSession(r);
       },
@@ -262,6 +270,8 @@
   }
 
   // ────────────────────────── DEMO (this browser only) ──────────────────────────
+  function demoKey(contact, channel) { return channel === "email" ? String(contact).trim().toLowerCase() : String(contact).replace(/\D/g, ""); }
+
   function demoBackend() {
     const DBK = "wcia_demo_db", SK = "wcia_demo_session";
     const uuid = () => (crypto.randomUUID ? crypto.randomUUID() : "x" + Math.random().toString(16).slice(2) + Date.now().toString(16));
@@ -353,10 +363,10 @@
         db.profiles.push({ id, role: "customer", full_name: "", phone: "", email: "", language: language || "es", guest: true, created_at: now() });
         save(db); uid = id; store.set(SK, uid);
       },
-      async verifyStart(phone) { store.set("wcia_demo_pending", { phone: String(phone).replace(/\D/g, "") }); return phone; },
-      async verifyCode(phone, code) { // demo: the code is always 123456
+      async verifyStart(contact, channel) { store.set("wcia_demo_pending", { key: demoKey(contact, channel) }); return contact; },
+      async verifyCode(contact, code, channel) { // demo: the code is always 123456
         const pend = store.get("wcia_demo_pending", null);
-        need(pend && pend.phone === String(phone).replace(/\D/g, "") && String(code).replace(/\D/g, "") === "123456", "invalid_code");
+        need(pend && pend.key === demoKey(contact, channel) && String(code).replace(/\D/g, "") === "123456", "invalid_code");
         const db = load(); const p = P(db, uid); need(p, "not_allowed");
         delete p.guest; p.phone_verified = true; save(db); store.del("wcia_demo_pending");
       },

@@ -9,6 +9,9 @@ window.WCIA_CONFIG = {
   // ON by owner decision. Still to do: apply marketplace/supabase/guest_booking.sql (bot limits) and turn on
   // "Allow anonymous sign-ins" + the Phone provider in Supabase Auth. Without them the flow falls back safely.
   GUEST_BOOKING: true,
+  // How guests prove they are a person: "email" (free, works now: a code to their email) or "phone"
+  // (code by WhatsApp, then SMS; needs the Phone provider with Twilio in Supabase Auth).
+  GUEST_VERIFY: "email",
   // Suggested hourly rate used only to pre-fill an estimate the customer can change.
   SUGGESTED_HOURLY: 30,
   // Owner contact shown to customers and cleaners.

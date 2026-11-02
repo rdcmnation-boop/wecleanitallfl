@@ -82,3 +82,21 @@ test('guestStart failure surfaces as an error (app falls back to normal sign-up)
   await assert.rejects(() => api.guestStart('es'), /guest_unavailable/);
   assert.equal(ls.has('wcia_session'), false);
 });
+
+test('email channel: sends a code to the email with the guest token (no WhatsApp, no phone)', async () => {
+  const { api, calls } = boot({ session: true });
+  const e = await api.verifyStart(' Cliente@Example.com ', 'email');
+  assert.equal(e, 'Cliente@Example.com');
+  const c = calls[0];
+  assert.equal(c.method, 'PUT'); assert.ok(c.url.endsWith('/auth/v1/user')); assert.equal(c.headers.Authorization, 'Bearer AT');
+  assert.deepEqual(c.body, { email: 'Cliente@Example.com' });
+});
+
+test('email channel: confirms with email_change and stores the verified session', async () => {
+  const { api, calls, ls } = boot({ session: true });
+  await api.verifyCode('cliente@example.com', '12 34-56', 'email');
+  const c = calls[0];
+  assert.ok(c.url.endsWith('/auth/v1/verify'));
+  assert.deepEqual(c.body, { type: 'email_change', email: 'cliente@example.com', token: '123456' });
+  assert.equal(JSON.parse(ls.get('wcia_session')).user.is_anonymous, false);
+});
