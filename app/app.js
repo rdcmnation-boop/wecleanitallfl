@@ -438,6 +438,8 @@
   }
   // Voice in: the words go to the same assistant as typing. Stays on the device's own speech service (no key needed).
   function brainListen(role) {
+    // iPhone Safari (and others) only let a page speak after a tap. Speak an empty phrase now, during the tap, so the reply can be read aloud later.
+    try { if ("speechSynthesis" in window && window.SpeechSynthesisUtterance) speechSynthesis.speak(new SpeechSynthesisUtterance("")); } catch (e) { /* reading aloud is optional */ }
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) { toast(t("brain_voice_no"), "bad"); return; }
     let rec;
