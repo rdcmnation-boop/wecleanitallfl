@@ -301,6 +301,13 @@
   }
   let OWNER = null;
   const owner = () => OWNER || (OWNER = window.WCIA_OWNER({ t, esc, icon, money, when, svcName, S, tile, loading, empty, wa, CFG, lang: () => lang }));
+  // Agent console: runs on the owner's own session. Class D requests only create approvals; nothing runs by itself.
+  let CONSOLE = null;
+  const askAgents = async (text) => {
+    if (!window.WCIA_CONSOLE || !window.WCIA_ORCH || !window.WCIA_TOOLS) throw new Error("agent console not loaded");
+    CONSOLE = CONSOLE || window.WCIA_CONSOLE.createConsole({ orch: window.WCIA_ORCH, tools: window.WCIA_TOOLS, api: API });
+    return CONSOLE.ask(text, S.data.agents || []);
+  };
   const loading = () => '<div class="skeleton"><i></i><i></i><i></i></div>';
   const empty = (ic, title, sub, btn) => '<div class="empty">' + icon(ic, "xl") + "<h3>" + esc(title) + "</h3>" + (sub ? "<p>" + esc(sub) + "</p>" : "") + (btn || "") + "</div>";
 
@@ -690,6 +697,15 @@
       const reason = (root.querySelector('[data-reason="' + id + '"]') || {}).value || "";
       if (el.dataset.s === "rejected" && reason.trim().length < 3) { root.querySelector('[data-reason="' + id + '"]').focus(); return; }
       await run(() => API.adminDecideApproval(id, el.dataset.s, reason.trim()), t("saved")).catch(() => {}); loadTab(true);
+    }
+    else if (a === "ask") {
+      const box = root.querySelector("#agent-ask");
+      const text = ((box && box.value) || "").trim();
+      if (text.length < 3) { if (box) box.focus(); return; }
+      const answer = await askAgents(text).catch((e) => ({ error: String((e && e.message) || e).slice(0, 160) }));
+      S.data = Object.assign({}, S.data, { answer });
+      render();
+      loadTab(true);
     }
     else if (a === "bfilter") { S.bfilter = el.dataset.f; render(); }
     else if (a === "wstatus") { await run(() => API.adminSetWorkerStatus(id, el.dataset.s), t("saved")).catch(() => {}); loadTab(true); }
