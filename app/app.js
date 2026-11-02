@@ -146,7 +146,7 @@
     worker: [],
     admin: [["panel", "grid", "tab_panel"], ["bookings", "list", "tab_bookings"], ["workers", "users", "tab_workers"], ["system", "spark", "tab_more"]]
   };
-  const APP_VERSION = "2026.11.2d";
+  const APP_VERSION = "2026.11.2e";
   let DASH = null;
   const DD = () => DASH || (DASH = window.WCIA_DASH({ t, esc, icon, money, when, svcName, S, CFG, wa, tel, stars, empty, loading, jobTimer, statusBanner, reviewsPanel, role, brainCard, store, tile, lang: () => lang, version: APP_VERSION }));
   // Screens a role can open (tab bar + side menu + sub-screens), so a saved screen is restored after a reload.
@@ -1243,6 +1243,11 @@
       if (a === "agcap") { const v = window.prompt(lang === "es" ? "Tope mensual de IA en dólares (0 = IA apagada)" : "Monthly AI cap in dollars (0 = AI off)", String(st.ai_monthly_cap_usd ?? 10)); if (v == null) return; cap = Math.max(0, Math.min(1000, Number(String(v).replace(/[^\d.]/g, "")) || 0)); }
       if (a === "agmsg") msg = !st.messaging_on;
       await run(() => API.adminSaveAgentSettings(cap, auto, null, msg), t("saved")).catch(() => {}); loadTab(true);
+    }
+    else if (a === "agowner") {
+      const v = window.prompt(lang === "es" ? "Tu número personal de WhatsApp (con código de área). Desde ese número recibes el modo dueño." : "Your personal WhatsApp number (with area code). Messages from it get owner mode.", "");
+      if (v == null || !String(v).replace(/\D/g, "")) return;
+      await run(() => API.adminSetOwnerWhatsApp(String(v)), t("saved")).catch(() => {}); loadTab(true);
     }
     else if (a === "agentstatus") { await run(() => API.adminSetAgentStatus(el.dataset.agent, el.dataset.s), t("saved")).catch(() => {}); loadTab(true); }
     else if (a === "decide") {

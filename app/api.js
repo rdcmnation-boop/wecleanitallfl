@@ -241,6 +241,7 @@
       adminRedispatch: (b) => rpc("admin_redispatch", { p_booking: b }),
       adminAgentOverview: () => rpc("admin_agent_overview"),
       adminCloseTask: (id, status) => rpc("admin_close_task", { p_id: id, p_status: status }),
+      adminSetOwnerWhatsApp: (phone) => rpc("admin_set_owner_whatsapp", { p_phone: phone }),
       adminSaveAgentSettings: (cap, autoSend, model, messagingOn) => rpc("admin_save_agent_settings", { p_cap: cap, p_auto_send: autoSend, p_model: model, p_messaging_on: messagingOn }),
       adminBrainNotes: () => rpc("admin_brain_notes"),
       adminSetBrainNote: (id, status) => rpc("admin_set_brain_note", { p_id: id, p_status: status }),
@@ -564,12 +565,15 @@
       // Demo copy of the agents overview (the real one comes from admin_agent_overview).
       async adminAgentOverview() {
         const day = (d) => new Date(Date.now() + d * 864e5).toISOString();
-        const st = store.get("wcia_demo_agset", null) || { auto_send: ["routine", "support"], ai_provider: "anthropic", ai_model: "claude-haiku-5-5", ai_monthly_cap_usd: 10, audit_retention_days: 365, chat_retention_days: 90, messaging_on: false };
+        const st = store.get("wcia_demo_agset", null) || { auto_send: ["routine", "support"], ai_provider: "anthropic", ai_model: "claude-haiku-5-5", ai_monthly_cap_usd: 10, audit_retention_days: 365, chat_retention_days: 90, messaging_on: false, owner_whatsapp_last4: "9303" };
         return { settings: st, budget: { cap: st.ai_monthly_cap_usd, spent: 0, left: st.ai_monthly_cap_usd, ok: st.ai_monthly_cap_usd > 0, model: st.ai_model, calls: 0 },
           steps: [{ step: 1, at: day(0), live: true, agents: ["dispatch", "operations", "orchestrator"] }, { step: 2, at: day(3), live: false, agents: ["compliance", "security", "support"] }, { step: 3, at: day(7), live: false, agents: ["finance", "growth", "pricing", "quality"] }],
-          agents: [], tasks: [{ id: 1, agent: "operations", kind: "flag_late_job", title: "WC-1003 is late: the cleaner has not started or said they are on the way.", status: "open", created_at: day(-0.02) }], open_tasks: 1 };
+          whatsapp: { in_today: 4, people_7d: 3 },
+          agents: [], tasks: [{ id: 1, agent: "operations", kind: "flag_late_job", title: "WC-1003 is late: the cleaner has not started or said they are on the way.", status: "open", created_at: day(-0.02) },
+            { id: 2, agent: "orchestrator", kind: "wa_handoff", title: "WhatsApp: client Ana asks for a person (…0101)", status: "open", created_at: day(-0.01), phone: "13055550101" }], open_tasks: 2 };
       },
       async adminCloseTask() {},
+      async adminSetOwnerWhatsApp(phone) { const st = (await this.adminAgentOverview()).settings; const d = String(phone || "").replace(/\D/g, ""); need(d.length >= 10, "invalid_phone"); st.owner_whatsapp_last4 = d.slice(-4); store.set("wcia_demo_agset", st); return d.slice(-4); },
       async adminSaveAgentSettings(cap, autoSend, model, messagingOn) {
         const st = (await this.adminAgentOverview()).settings;
         if (cap != null) st.ai_monthly_cap_usd = cap; if (autoSend) st.auto_send = autoSend; if (messagingOn != null) st.messaging_on = messagingOn;

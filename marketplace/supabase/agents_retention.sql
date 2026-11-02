@@ -35,7 +35,7 @@ end $$;
 
 create or replace function public.agents_retention()
 returns jsonb language plpgsql security definer set search_path = public as $$
-declare s public.agent_settings; a int; b int; c int; d int; e int; f int;
+declare s public.agent_settings; a int; b int; c int; d int; e int; f int; g int;
 begin
   select * into s from public.agent_settings where id = 1;
   perform set_config('wcia.retention', 'on', true);
@@ -55,7 +55,9 @@ begin
   get diagnostics e = row_count;
   delete from public.brain_questions where created_at < now() - make_interval(days => s.chat_retention_days);
   get diagnostics f = row_count;
-  return jsonb_build_object('agent_actions', a, 'approvals', b, 'audit_log', c, 'agent_tasks', d, 'ai_usage', e, 'chat', f);
+  delete from public.wa_messages where at < now() - make_interval(days => s.chat_retention_days); -- WhatsApp chats (whatsapp_agent.sql)
+  get diagnostics g = row_count;
+  return jsonb_build_object('agent_actions', a, 'approvals', b, 'audit_log', c, 'agent_tasks', d, 'ai_usage', e, 'chat', f, 'whatsapp', g);
 end $$;
 
 

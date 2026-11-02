@@ -796,3 +796,6 @@ body.cleaner .dash{position:relative;min-height:100vh;min-height:100dvh}
 .ag-num{flex:none;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font:800 14px var(--display);background:rgba(255,255,255,.08)}
 .ag-step.live .ag-num{background:var(--lime);color:var(--leaf);box-shadow:0 0 12px rgba(162,234,79,.5)}
 .ag-task{display:flex;flex-direction:column;gap:8px;padding:12px 0;border-top:1px solid var(--line-2)} .ag-task small{color:var(--faint)}
+
+/* long links (webhook URL) wrap on phones */
+.card code{word-break:break-all;font-size:.82em;background:rgba(255,255,255,.06);padding:1px 5px;border-radius:6px}
