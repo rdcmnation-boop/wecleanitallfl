@@ -204,7 +204,7 @@
       '<button class="chip-btn" data-act="lang" aria-label="' + t("language") + '">' + (lang === "es" ? "EN" : "ES") + "</button></div></header>";
   }
   function demoBanner() {
-    const guest = S.me && S.me.isGuest ? '<div class="guest-banner"><span>' + esc(t("guest_banner")) + '</span><button class="link-btn" data-act="tab" data-tab="account">' + esc(t("guest_save")) + "</button></div>" : "";
+    const guest = S.me && S.me.needsAccount && !S.me.isAdmin ? '<div class="guest-banner"><span>' + esc(t("guest_banner")) + '</span><button class="link-btn" data-act="tab" data-tab="account">' + esc(t("guest_save")) + "</button></div>" : "";
     return (API.mode === "demo" ? '<div class="demo-banner">' + esc(t("demo_banner")) + "</div>" : "") + guest;
   }
 
@@ -294,11 +294,11 @@
     const v = S.verify; if (!v) return "";
     const demoHint = API.mode === "demo" ? '<p class="fine">' + esc(t("verify_demo_hint")) + "</p>" : "";
     const body = v.step === "email"
-      ? '<p class="muted">' + esc(t("verify_sub")) + "</p>" + field("email", t("email"), "email", 'required autocomplete="email"') + field("password", t("password"), "password", 'required minlength="8" autocomplete="new-password"', t("pw_hint")) +
+      ? '<p class="muted">' + esc(t("verify_sub")) + "</p>" + field("phone", t("phone"), "tel", 'required inputmode="tel" maxlength="20" autocomplete="tel"', null, v.info.gp) +
         '<label class="consent"><input type="checkbox" name="consent" value="1"><span>' + esc(t("consent_a")) + ' <a href="/terms/" target="_blank" rel="noopener">' + esc(t("terms")) + '</a>, <a href="/privacy/" target="_blank" rel="noopener">' + esc(t("privacy")) + "</a> " + esc(t("consent_b")) + "</span></label>" +
         '<button class="btn solid block" type="submit">' + esc(t("send_code")) + "</button>"
-      : '<p class="muted">' + esc(t("code_sent", { e: v.email })) + "</p>" + field("code", t("mfa_code"), "text", 'required inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" autofocus') + demoHint +
-        '<button class="btn solid block" type="submit">' + esc(t("verify_send")) + "</button>";
+      : '<p class="muted">' + esc(t("code_sent", { e: v.phone })) + "</p>" + field("code", t("mfa_code"), "text", 'required inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" autofocus') + demoHint +
+        '<button class="btn solid block" type="submit">' + esc(t("verify_send")) + '</button><button type="button" class="link-btn center" data-act="verifyback">' + esc(t("change_phone")) + "</button>";
     return '<div class="modal" role="dialog" aria-modal="true"><form class="modal-card stack" data-form="verify" novalidate><div class="row between"><p class="label">' + icon("shield") + esc(t("verify_title")) + '</p><button type="button" class="x" data-act="verifycancel" aria-label="' + esc(t("cancel")) + '">×</button></div>' + body + "</form></div>";
   }
   function appShell() {
@@ -435,7 +435,7 @@
   function vAccount() {
     const p = S.me.profile;
     return '<h1 class="title">' + esc(t("my_account")) + "</h1>" +
-      (S.me.isGuest ? '<form class="card form" data-form="upgrade" novalidate><p class="label">' + icon("shield") + esc(t("guest_save_title")) + '</p><p class="muted">' + esc(t("guest_save_sub")) + "</p>" +
+      (S.me.needsAccount && !S.me.isAdmin ? '<form class="card form" data-form="upgrade" novalidate><p class="label">' + icon("shield") + esc(t("guest_save_title")) + '</p><p class="muted">' + esc(t("guest_save_sub")) + "</p>" +
         field("email", t("email"), "email", 'required autocomplete="email"') + field("password", t("password"), "password", 'required minlength="8" autocomplete="new-password"') +
         '<button class="btn solid block" type="submit">' + esc(t("guest_save")) + "</button></form>" : "") +
       '<form class="card form" data-form="account">' +
@@ -696,6 +696,7 @@
       catch (err) { console.error(err); S.authRole = "customer"; S.form.kind = "individual"; S.screen = "signup"; render(); } // guest not available: normal sign-up
     }
     else if (a === "verifycancel") { S.verify = null; render(); }
+    else if (a === "verifyback") { S.verify = Object.assign({}, S.verify, { step: "email" }); render(); }
     else if (a === "skipmfa") { S.skipMfa = true; S.mfa = null; startRole(); }
     else if (a === "forgot") { S.screen = "forgot"; render(); }
     else if (a === "home") { S.screen = "landing"; render(); }
@@ -859,7 +860,7 @@
           hours_est: Number(f.hours_est) || null, budget: f.budget === "" ? null : Number(f.budget), notes: (f.notes || "").trim(),
           preferred_worker_id: f.preferred_worker_id || null
         };
-        if (guestInfo) { S.verify = { step: "email", row, info: guestInfo, email: "" }; render(); return; } // human check first
+        if (guestInfo) { S.verify = { step: "email", row, info: guestInfo, phone: "" }; render(); return; } // human check first
         await run(() => API.createBooking(row));
         S.form.book = null; S.form.prefCleaner = null;
         toast(t("request_sent"), "ok");
@@ -869,12 +870,12 @@
         const v = S.verify; if (!v) return;
         if (v.step === "email") {
           if (!d.consent) { toast(t("consent_needed"), "bad"); return; }
-          if (String(d.password || "").length < 8) { toast(t("pw_short"), "bad"); return; }
-          await run(() => API.verifyStart(d.email.trim(), d.password));
+          if (digits(d.phone).length < 10) { toast(t("guest_phone_needed"), "bad"); return; }
+          await run(() => API.verifyStart(d.phone.trim()));
           try { await API.recordConsent(LEGAL_VERSION); } catch (err) { console.error(err); }
-          S.verify = Object.assign({}, v, { step: "code", email: d.email.trim() }); render();
+          S.verify = Object.assign({}, v, { step: "code", phone: d.phone.trim(), info: Object.assign({}, v.info, { gp: d.phone.trim() }) }); render();
         } else {
-          await run(() => API.verifyCode(v.email, d.code));
+          await run(() => API.verifyCode(v.phone, d.code));
           S.me = await API.me();
           if (S.me.isGuest) { toast(t("verify_wrong"), "bad"); return; }
           await run(() => API.saveProfile(S.me.profile.id, { full_name: v.info.gn, phone: v.info.gp, language: lang }));

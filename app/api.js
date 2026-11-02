@@ -19,6 +19,7 @@
     const URL_ = CFG.SUPABASE_URL.replace(/\/$/, "");
     const KEY = CFG.SUPABASE_ANON_KEY;
     const SKEY = "wcia_session";
+    const digits = (s) => String(s || "").replace(/\D/g, "");
     const DKEY = "wcia_device"; // trusted-device secret (kept on purpose across sign-out)
     const deviceToken = () => { const v = store.get(DKEY, null); return typeof v === "string" && v.length >= 32 ? v : null; };
     let session = store.get(SKEY, null);
@@ -97,13 +98,18 @@
         if (!r || !r.access_token) throw new ApiError("guest_unavailable");
         saveSession(r);
       },
-      // Human check before a request is sent: attach email + password to the guest; Supabase emails a confirmation (code or link).
-      async verifyStart(email, password) {
-        const t = await token();
-        await raw("/auth/v1/user", { method: "PUT", headers: { apikey: KEY, Authorization: "Bearer " + t, "Content-Type": "application/json" }, body: JSON.stringify({ email, password }) });
+      // Human check before a request is sent: confirm the PHONE (that is where WhatsApp updates go).
+      // Supabase sends a code through the phone provider configured in Auth (Twilio). WhatsApp first, SMS as fallback.
+      async verifyStart(phone) {
+        const t = await token(); const h = { apikey: KEY, Authorization: "Bearer " + t, "Content-Type": "application/json" };
+        const e164 = "+" + (digits(phone).length === 10 ? "1" : "") + digits(phone);
+        try { await raw("/auth/v1/user", { method: "PUT", headers: h, body: JSON.stringify({ phone: e164, channel: "whatsapp" }) }); }
+        catch (e) { await raw("/auth/v1/user", { method: "PUT", headers: h, body: JSON.stringify({ phone: e164 }) }); }
+        return e164;
       },
-      async verifyCode(email, code) {
-        const r = await raw("/auth/v1/verify", { method: "POST", headers: { apikey: KEY, "Content-Type": "application/json" }, body: JSON.stringify({ type: "email_change", email, token: String(code).replace(/\D/g, "") }) });
+      async verifyCode(phone, code) {
+        const e164 = "+" + (digits(phone).length === 10 ? "1" : "") + digits(phone);
+        const r = await raw("/auth/v1/verify", { method: "POST", headers: { apikey: KEY, "Content-Type": "application/json" }, body: JSON.stringify({ type: "phone_change", phone: e164, token: String(code).replace(/\D/g, "") }) });
         if (r && r.access_token) saveSession(r);
       },
       // Keep proof that the person accepted the terms (version + time) on their auth user. No schema change.
@@ -147,7 +153,8 @@
         if (profile.role === "worker") { const w = await rest("/workers?select=*&id=eq." + profile.id); worker = w && w[0]; }
         if (isAdminAccount && !isAdmin && deviceToken()) store.del(DKEY); // expired/revoked secret: drop it, ask for the code
         const isGuest = !!(session && session.user && session.user.is_anonymous);
-        return { profile, worker, isAdmin: !!isAdmin, adminNeedsMfa: !!isAdminAccount && !isAdmin, isGuest };
+        const needsAccount = isGuest || !(session && session.user && session.user.email);
+        return { profile, worker, isAdmin: !!isAdmin, adminNeedsMfa: !!isAdminAccount && !isAdmin, isGuest, needsAccount };
       },
       // 2-step verification (authenticator app) — required for owner powers.
       async mfaStatus() {
@@ -346,20 +353,16 @@
         db.profiles.push({ id, role: "customer", full_name: "", phone: "", email: "", language: language || "es", guest: true, created_at: now() });
         save(db); uid = id; store.set(SK, uid);
       },
-      async verifyStart(email, password) {
-        const db = load(); const p = P(db, uid); need(p && p.guest, "not_allowed");
-        need(!db.users.some((u) => u.email.toLowerCase() === String(email).toLowerCase()), "user_already_exists");
-        need(String(password).length >= 8, "weak_password");
-        store.set("wcia_demo_pending", { email, password });
-      },
-      async verifyCode(email, code) { // demo: the code is always 123456
+      async verifyStart(phone) { store.set("wcia_demo_pending", { phone: String(phone).replace(/\D/g, "") }); return phone; },
+      async verifyCode(phone, code) { // demo: the code is always 123456
         const pend = store.get("wcia_demo_pending", null);
-        need(pend && pend.email === email && String(code).replace(/\D/g, "") === "123456", "invalid_code");
-        await this.upgradeGuest(pend.email, pend.password); store.del("wcia_demo_pending");
+        need(pend && pend.phone === String(phone).replace(/\D/g, "") && String(code).replace(/\D/g, "") === "123456", "invalid_code");
+        const db = load(); const p = P(db, uid); need(p, "not_allowed");
+        delete p.guest; p.phone_verified = true; save(db); store.del("wcia_demo_pending");
       },
       async recordConsent(version) { const db = load(); const p = P(db, uid); if (p) { p.consent = { version, at: now() }; save(db); } },
       async upgradeGuest(email, password) {
-        const db = load(); const p = P(db, uid); need(p && p.guest, "not_allowed");
+        const db = load(); const p = P(db, uid); need(p && !p.email, "not_allowed");
         need(!db.users.some((u) => u.email.toLowerCase() === String(email).toLowerCase()), "user_already_exists");
         const u = db.users.find((x) => x.id === uid); u.email = email; u.password = password;
         p.email = email; delete p.guest; save(db);
@@ -386,7 +389,7 @@
       async me() {
         const db = load(); const profile = uid && P(db, uid);
         if (!profile) { uid = null; store.del(SK); return null; }
-        return { profile: Object.assign({}, profile), worker: W(db, uid) ? Object.assign({}, W(db, uid)) : null, isAdmin: isAdmin(db), adminNeedsMfa: false, isGuest: !!profile.guest };
+        return { profile: Object.assign({}, profile), worker: W(db, uid) ? Object.assign({}, W(db, uid)) : null, isAdmin: isAdmin(db), adminNeedsMfa: false, isGuest: !!profile.guest, needsAccount: !profile.email };
       },
       async saveProfile(id, p) { const db = load(); need(id === uid); Object.assign(P(db, id), { full_name: p.full_name, phone: p.phone, language: p.language }); save(db); },
       async saveWorker(id, w) {

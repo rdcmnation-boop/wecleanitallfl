@@ -7,7 +7,7 @@ const path = require('node:path');
 const vm = require('node:vm');
 const SRC = fs.readFileSync(path.join(__dirname, '..', '..', '..', 'app', 'api.js'), 'utf8');
 
-function boot({ anonymous = true, session = false, emptySignup = false } = {}) {
+function boot({ anonymous = true, session = false, emptySignup = false, failWhatsapp = false } = {}) {
   const ls = new Map(), calls = [];
   if (session) ls.set('wcia_session', JSON.stringify({ access_token: 'AT', refresh_token: 'RT', expires_at: Math.floor(Date.now() / 1000) + 3000, user: { id: 'u1', is_anonymous: anonymous } }));
   const reply = (url, opts) => {
@@ -18,7 +18,8 @@ function boot({ anonymous = true, session = false, emptySignup = false } = {}) {
     if (url.includes('/profiles')) return [{ id: 'g1', role: 'customer' }];
     return {};
   };
-  const fetch = async (url, opts = {}) => { calls.push({ url, method: opts.method || 'GET', headers: opts.headers || {}, body: opts.body ? JSON.parse(opts.body) : null }); return { ok: true, status: 200, text: async () => JSON.stringify(reply(url, opts)) }; };
+  const fetch = async (url, opts = {}) => { const body = opts.body ? JSON.parse(opts.body) : null; calls.push({ url, method: opts.method || 'GET', headers: opts.headers || {}, body });
+    if (failWhatsapp && body && body.channel === 'whatsapp') return { ok: false, status: 400, text: async () => JSON.stringify({ msg: 'channel_not_supported' }) }; return { ok: true, status: 200, text: async () => JSON.stringify(reply(url, opts)) }; };
   const win = { WCIA_CONFIG: { SUPABASE_URL: 'https://x.supabase.co', SUPABASE_ANON_KEY: 'anon', APP_URL: 'https://app.test/' } };
   const ctx = vm.createContext({ window: win, fetch, console, URLSearchParams, Date, Math, JSON, String, Number, Promise, Object, Array, Error, encodeURIComponent,
     localStorage: { getItem: (k) => (ls.has(k) ? ls.get(k) : null), setItem: (k, v) => ls.set(k, v), removeItem: (k) => ls.delete(k) },
@@ -44,19 +45,27 @@ test('guest is flagged as guest by me(); verified user is not', async () => {
   assert.equal((await b.api.me()).isGuest, false);
 });
 
-test('verifyStart attaches email + password with the guest token', async () => {
+test('verifyStart sends the phone (E.164) with the guest token, asking for WhatsApp first', async () => {
   const { api, calls } = boot({ session: true });
-  await api.verifyStart('c@x.test', 'Secret123!');
+  const e = await api.verifyStart('(786) 555-0142');
+  assert.equal(e, '+17865550142');
   const c = calls[0];
   assert.equal(c.method, 'PUT'); assert.equal(c.headers.Authorization, 'Bearer AT');
-  assert.deepEqual(c.body, { email: 'c@x.test', password: 'Secret123!' });
+  assert.deepEqual(c.body, { phone: '+17865550142', channel: 'whatsapp' });
 });
 
-test('verifyCode confirms the email change, keeps digits only, and stores the verified session', async () => {
+test('verifyStart falls back to SMS when the WhatsApp channel is refused', async () => {
+  const b = boot({ session: true, failWhatsapp: true });
+  await b.api.verifyStart('7865550142');
+  assert.equal(b.calls.length, 2);
+  assert.deepEqual(b.calls[1].body, { phone: '+17865550142' });
+});
+
+test('verifyCode confirms the phone change, keeps digits only, and stores the verified session', async () => {
   const { api, calls, ls } = boot({ session: true });
-  await api.verifyCode('c@x.test', '12 34-56');
+  await api.verifyCode('786 555 0142', '12 34-56');
   const c = calls[0];
-  assert.ok(c.url.endsWith('/auth/v1/verify')); assert.deepEqual(c.body, { type: 'email_change', email: 'c@x.test', token: '123456' });
+  assert.ok(c.url.endsWith('/auth/v1/verify')); assert.deepEqual(c.body, { type: 'phone_change', phone: '+17865550142', token: '123456' });
   assert.equal(JSON.parse(ls.get('wcia_session')).user.is_anonymous, false);
 });
 
