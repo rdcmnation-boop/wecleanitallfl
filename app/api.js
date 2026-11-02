@@ -235,6 +235,8 @@
       adminLogAgentAction: (agent, action, cls, hash, summary) => rpc("admin_log_agent_action", { p_agent: agent, p_action: action, p_class: cls, p_input_hash: hash || "", p_summary: summary || "" }),
       adminRequestApproval: (agent, action, payload) => rpc("admin_request_approval", { p_agent: agent, p_action: action, p_payload: payload || {} }),
       adminRedispatch: (b) => rpc("admin_redispatch", { p_booking: b }),
+      adminBrainNotes: () => rpc("admin_brain_notes"),
+      adminSetBrainNote: (id, status) => rpc("admin_set_brain_note", { p_id: id, p_status: status }),
       async aiBriefing(lang) {
         try {
           const t = await token();
@@ -531,6 +533,8 @@
       async adminAgents() { return [{ agent: "operations", role_description: "Watches bookings, late jobs and open requests. Read-only.", max_class: "A", status: "paused" }]; },
       async adminPendingApprovals() { return []; },
       async adminAgentLog() { return []; },
+      async adminBrainNotes() { return []; },
+      async adminSetBrainNote() { return true; },
       async adminDecideApproval() {},
       async adminSetAgentStatus() {},
       async deviceStatus() { return { this_device: false, active: 0 }; },
