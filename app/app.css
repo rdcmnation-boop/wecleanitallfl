@@ -802,3 +802,5 @@ body.cleaner .dash{position:relative;min-height:100vh;min-height:100dvh}
 .sec-all{display:flex;justify-content:flex-end;margin:-4px 0 2px}
 .now-sec>summary{font-size:1.5rem;font-weight:800;border:0;background:none;padding:6px 0}
 .now-sec{border:0;background:none}
+.ofold>summary .eyebrow{margin:0}
+.ofold>.card{margin:0 10px 10px;border:0;box-shadow:none;background:transparent;padding:4px 6px 10px}

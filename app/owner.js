@@ -7,6 +7,13 @@
     const L = () => c.lang() === "es";
     const pct = (n) => n == null ? "—" : Math.round(n) + "%";
     const num = (n) => n == null ? "—" : Number(n).toLocaleString(L() ? "es-US" : "en-US", { maximumFractionDigits: 1 });
+    // Fold a card into a collapsible section (same look and memory as the booking form). Title stays visible.
+    const fold = (key, html, open) => {
+      const m = html.match(/^<section class="card([^"]*)"><p class="eyebrow">([\s\S]*?)<\/p>([\s\S]*)<\/section>$/);
+      if (!m) return html;
+      const isOpen = S.secs && key in S.secs ? S.secs[key] : !!open;
+      return '<details class="sec ofold" data-sec="' + key + '"' + (isOpen ? " open" : "") + '><summary><span class="eyebrow">' + m[2] + '</span></summary><div class="card' + m[1] + '">' + m[3] + "</div></details>";
+    };
     const dayLabel = (d) => new Date(d + "T12:00:00").toLocaleDateString(L() ? "es-US" : "en-US", { month: "short", day: "numeric" });
 
     // ───────── charts (single hue, thin marks, hover tooltips, no dual axes) ─────────
@@ -255,7 +262,7 @@
         (open.length ? open.map((x) => '<div class="ag-task"><div><small>' + esc(x.agent) + " · " + esc(when(x.created_at)) + "</small><p>" + esc(x.title) + '</p></div><div class="row gap">' +
           (x.phone ? '<a class="btn wa small" target="_blank" rel="noopener" href="' + esc("https://wa.me/" + String(x.phone).replace(/\D/g, "")) + '">' + icon("chat") + "WhatsApp</a>" : "") + '<button class="btn solid small" data-act="task" data-id="' + esc(x.id) + '" data-s="done">' + esc(tr("Done", "Hecho")) + '</button><button class="btn ghost small" data-act="task" data-id="' + esc(x.id) + '" data-s="dismissed">' + esc(tr("Dismiss", "Descartar")) + "</button></div></div>").join("")
           : '<p class="muted">' + esc(tr("Nothing needs you right now. Checks run every 5 minutes.", "Nada te necesita ahora. Revisan cada 5 minutos.")) + "</p>") + "</section>";
-      return decisions + waCard + steps + tasks;
+      return fold("ag_tasks", tasks, true) + fold("ag_dec", decisions) + fold("ag_wa", waCard) + fold("ag_steps", steps);
     }
 
     // Launch checklist: what already works (checked) and what is still missing, with direct links.
@@ -292,11 +299,11 @@
           '<div class="row" style="gap:8px;flex-wrap:wrap;margin-top:6px"><a class="btn ghost small" target="_blank" rel="noopener" href="' + esc(P + "/auth/templates") + '">' + esc(tr("Email templates", "Plantillas de correo")) + "</a></div>") +
         '<p class="muted ag-d" style="margin-top:10px">' + esc(tr("To switch to WhatsApp later: 1) Twilio account with a WhatsApp sender. 2) Supabase → Providers → Phone: paste the Account SID, Auth Token and Verify/Messaging service. 3) Set GUEST_VERIFY to \"phone\" in app/config.js and publish.", "Para cambiar a WhatsApp después: 1) Cuenta de Twilio con remitente de WhatsApp. 2) Supabase → Providers → Phone: pega el Account SID, Auth Token y el servicio de mensajes. 3) Cambia GUEST_VERIFY a \"phone\" en app/config.js y publica.")) + "</p>" +
         '<div class="row" style="gap:8px;flex-wrap:wrap;margin-top:6px"><a class="btn ghost small" target="_blank" rel="noopener" href="' + esc(P + "/auth/providers") + '">' + esc(tr("Auth providers", "Proveedores de Auth")) + '</a><a class="btn ghost small" target="_blank" rel="noopener" href="https://console.twilio.com/">Twilio</a></div></section>';
-      return verifyCard + '<section class="card"><p class="eyebrow">' + esc(tr("Already working", "Ya funciona")) + " · " + done.length + "</p>" +
-        done.map((x) => '<div class="ckrow">' + ok + "<span>" + esc(tr(x[0], x[1])) + "</span></div>").join("") + "</section>" +
-        '<section class="card"><p class="eyebrow">' + esc(tr("Still missing for launch", "Falta para el lanzamiento")) + " · " + todo.length + "</p>" +
+      return fold("ln_verify", verifyCard) + fold("ln_done", '<section class="card"><p class="eyebrow">' + esc(tr("Already working", "Ya funciona")) + " · " + done.length + "</p>" +
+        done.map((x) => '<div class="ckrow">' + ok + "<span>" + esc(tr(x[0], x[1])) + "</span></div>").join("") + "</section>") +
+        fold("ln_todo", '<section class="card"><p class="eyebrow">' + esc(tr("Still missing for launch", "Falta para el lanzamiento")) + " · " + todo.length + "</p>" +
         todo.map((x) => '<div class="ckrow top">' + no + '<div><b>' + esc(tr(x[0], x[1])) + '</b><p class="muted ag-d">' + esc(tr(x[2], x[3])) + "</p>" +
-          (x[4].length ? '<div class="row" style="gap:8px;flex-wrap:wrap;margin-top:6px">' + x[4].map((l) => '<a class="btn ghost small" target="_blank" rel="noopener" href="' + esc(l[2]) + '">' + esc(tr(l[0], l[1])) + "</a>").join("") + "</div>" : "") + "</div></div>").join("") + "</section>";
+          (x[4].length ? '<div class="row" style="gap:8px;flex-wrap:wrap;margin-top:6px">' + x[4].map((l) => '<a class="btn ghost small" target="_blank" rel="noopener" href="' + esc(l[2]) + '">' + esc(tr(l[0], l[1])) + "</a>").join("") + "</div>" : "") + "</div></div>").join("") + "</section>", true);
     }
 
     const SYS = [["launch", "check"], ["architecture", "grid"], ["improve", "bulb"], ["agents", "list"], ["updates", "bell"], ["customers", "users"], ["connectors", "plug"], ["account", "user"]];
