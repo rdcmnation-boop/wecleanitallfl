@@ -228,8 +228,6 @@
       body = '<button class="back" data-act="home">‹ ' + esc(t("back")) + "</button>" +
         "<h2>" + esc(w ? t("want_work") : t("need_cleaning")) + "</h2>" +
         '<form class="card form" data-form="signup" novalidate>' +
-        (w ? seg("kind", [["individual", t("individual")], ["company", t("company")]], S.form.kind || "individual") +
-          '<label class="field company-only' + (S.form.kind === "company" ? "" : " hide") + '"><span>' + esc(t("company_name")) + '</span><input name="company_name" maxlength="120" autocomplete="organization"></label>' : "") +
         field("full_name", t("full_name"), "text", 'required maxlength="120" autocomplete="name" autofocus') +
         field("phone", t("phone"), "tel", 'required inputmode="tel" autocomplete="tel" maxlength="20" placeholder="954 555 0101"') +
         field("email", t("email"), "email", 'required autocomplete="email"') +
@@ -470,6 +468,39 @@
       speechSynthesis.speak(u);
     } catch (e) { /* reading aloud is optional */ }
   }
+  // Day and time chips for a scheduled visit. They write one value, scheduled_at ("YYYY-MM-DDTHH:MM"), which the booking submit already reads.
+  const SLOTS = ["08:00", "10:00", "12:00", "14:00", "16:00", "18:00"];
+  const earliestVisit = () => { const d = new Date(Date.now() + 2 * 3600e3); d.setMinutes(0, 0, 0); return d; };
+  const ymdOf = (d) => d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+  const slotOk = (day, time) => new Date(day + "T" + time) >= earliestVisit();
+  const firstSlot = (day) => SLOTS.find((s) => slotOk(day, s)) || null;
+  function pickWhen(form) {
+    const f = S.form.book;
+    const day = (form.querySelector('input[name="sday"]:checked') || {}).value;
+    if (!day) return;
+    let time = (form.querySelector('input[name="stime"]:checked') || {}).value;
+    if (!time || !slotOk(day, time)) time = firstSlot(day);
+    if (time) f.scheduled_at = day + "T" + time;
+  }
+  function whenPicker(f) {
+    const now = earliestVisit();
+    const days = [0, 1, 2, 3, 4, 5, 6].map((i) => new Date(now.getFullYear(), now.getMonth(), now.getDate() + i));
+    const curDay = (f.scheduled_at || "").slice(0, 10), curTime = (f.scheduled_at || "").slice(11, 16);
+    const loc = lang === "es" ? "es-US" : "en-US";
+    const dayChips = days.map((d) => {
+      const k = ymdOf(d);
+      return '<label class="chip"><input type="radio" name="sday" value="' + k + '"' + (k === curDay ? " checked" : "") + (firstSlot(k) ? "" : " disabled") + "><span>" +
+        esc(d.toLocaleDateString(loc, { weekday: "short", month: "short", day: "numeric" })) + "</span></label>";
+    }).join("");
+    const timeChips = SLOTS.map((s) => {
+      const ok = !!curDay && slotOk(curDay, s);
+      return '<label class="chip"><input type="radio" name="stime" value="' + s + '"' + (s === curTime ? " checked" : "") + (ok ? "" : " disabled") + "><span>" +
+        esc(new Date("2000-01-01T" + s).toLocaleTimeString(loc, { hour: "numeric", minute: "2-digit" })) + "</span></label>";
+    }).join("");
+    return '<p class="label small">' + esc(t("pick_day")) + '</p><div class="chips">' + dayChips + "</div>" +
+      '<p class="label small">' + esc(t("pick_time")) + '</p><div class="chips">' + timeChips + "</div>" +
+      '<input type="hidden" name="scheduled_at" value="' + esc(f.scheduled_at || "") + '">';
+  }
   function vBook() {
     const f = S.form.book || (S.form.book = { segment: "residential", service: "standard", bedrooms: 2, bathrooms: 1, frequency: "once", urgency: "scheduled" });
     const sg = suggest(f);
@@ -498,7 +529,7 @@
       field("address", t("address"), "text", 'maxlength="200" autocomplete="street-address"', t("address_private"), f.address || "") +
       '<div class="zip-map" id="addrMap">' + addrMapHtml(f) + "</div>" + "</div>" +
       secC + secO("when", t("sec_when")) + '<div class="card"><p class="label">' + esc(t("when")) + "</p>" + seg("urgency", [["scheduled", t("pick_date")], ["asap", t("asap")]], f.urgency) +
-      (f.urgency === "scheduled" ? field("scheduled_at", t("date_time"), "datetime-local", 'min="' + localMin + '" required', null, f.scheduled_at || "") : "") + "</div>" +
+      (f.urgency === "scheduled" ? whenPicker(f) : "") + "</div>" +
       secC + secO("details", t("sec_details") + " · $" + (f.budget || sg.budget), false) + '<div class="card"><div class="row2">' + field("hours_est", t("hours_est"), "number", 'step="0.5" min="0.5" max="200" inputmode="decimal"', null, f.hours_est || sg.hours) +
       field("budget", t("budget") + " ($)", "number", 'min="0" max="100000" inputmode="numeric"', null, f.budget || sg.budget) + "</div>" +
       '<p class="fine">' + esc(t("budget_hint")) + "</p></div>" +
@@ -717,9 +748,9 @@
       '<label class="field"><span>' + esc(t("bio")) + '</span><textarea name="bio" rows="3" maxlength="600">' + esc(w.bio) + "</textarea></label></div>" +
       '<div class="card">' + field("zips", t("zips_served"), "text", 'inputmode="numeric" required', t("zips_hint"), w.zips.join(", ")) + "</div>" +
       '<div class="card"><p class="label">' + esc(t("services_offered")) + "</p>" + chips("services", ALL_SERVICES.map((s) => [s, svcName(s)]), w.services, true) + "</div>" +
-      '<div class="card"><p class="label">' + esc(t("languages")) + "</p>" + chips("languages", LANGS.map((l) => [l, t("lang_" + l)]), w.languages, true) +
+      secO("more", t("more_optional"), false) + '<div class="card"><p class="label">' + esc(t("languages")) + "</p>" + chips("languages", LANGS.map((l) => [l, t("lang_" + l)]), w.languages, true) +
       field("years_experience", t("experience_years"), "number", 'min="0" max="60" inputmode="numeric"', null, w.years_experience) + "</div>" +
-      '<div class="card">' + toggle("has_transport", t("transport"), w.has_transport) + toggle("has_equipment", t("equipment"), w.has_equipment) + toggle("has_insurance", t("insurance"), w.has_insurance) + toggle("whatsapp_opt_in", t("wa_opt_in"), w.whatsapp_opt_in) + "</div>" +
+      '<div class="card">' + toggle("has_transport", t("transport"), w.has_transport) + toggle("has_equipment", t("equipment"), w.has_equipment) + toggle("has_insurance", t("insurance"), w.has_insurance) + toggle("whatsapp_opt_in", t("wa_opt_in"), w.whatsapp_opt_in) + "</div>" + secC +
       '<div class="card"><p class="label">' + esc(t("rate_type")) + "</p>" + seg("rate_type", [["hourly", t("hourly")], ["fixed", t("fixed")]], w.rate_type) +
       (w.rate_type === "hourly" ? field("hourly_rate", t("hourly_rate"), "number", 'min="0" max="1000" step="1" inputmode="decimal"', null, w.hourly_rate == null ? "" : w.hourly_rate) : "") + "</div>" +
       '<button class="btn solid block xl" type="submit">' + esc(t("save")) + "</button></form>" +
@@ -1016,6 +1047,7 @@
       await refreshMe();
     } else if (el.form && el.form.dataset.form === "book") {
       syncBook(el.form);
+      if (el.name === "sday" || el.name === "stime") { pickWhen(el.form); render(); return; }
       if (["segment", "urgency", "service", "bedrooms", "bathrooms", "sqft"].includes(el.name)) {
         const f = S.form.book;
         if (el.name === "segment") { f.service = SERVICES[f.segment][0]; f.frequency = "once"; }
