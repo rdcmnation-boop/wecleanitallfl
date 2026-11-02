@@ -146,7 +146,7 @@
     worker: [],
     admin: [["panel", "grid", "tab_panel"], ["bookings", "list", "tab_bookings"], ["workers", "users", "tab_workers"], ["system", "spark", "tab_more"]]
   };
-  const APP_VERSION = "2026.11.2c";
+  const APP_VERSION = "2026.11.2d";
   let DASH = null;
   const DD = () => DASH || (DASH = window.WCIA_DASH({ t, esc, icon, money, when, svcName, S, CFG, wa, tel, stars, empty, loading, jobTimer, statusBanner, reviewsPanel, role, brainCard, store, tile, lang: () => lang, version: APP_VERSION }));
   // Screens a role can open (tab bar + side menu + sub-screens), so a saved screen is restored after a reload.
@@ -367,7 +367,7 @@
     if (r === "worker" && S.tab === "dash") return D.vDash() + '<div id="radioSheetHost"></div>' + overlays;
     return header(bell) + demoBanner() +
       '<main class="wrap app' + (tabs.length ? "" : " no-tabs") + '">' + (views[S.tab] ? views[S.tab]() : "") + "</main>" +
-      '<div id="radioSheetHost"></div>' + miniRadio() +
+      (r === "worker" ? '<div id="radioSheetHost"></div>' + miniRadio() : "") +
       (tabs.length ? '<nav class="tabbar n' + tabs.length + '" aria-label="' + esc(t("m_menu")) + '">' + tabs.map(([k, ic, lab]) =>
         '<button data-act="tab" data-tab="' + k + '"' + (S.tab === k ? ' aria-current="page" class="on"' : "") + ">" + icon(ic) + "<span>" + esc(t(lab)) + "</span></button>").join("") + "</nav>" : "") + overlays;
   }
@@ -515,7 +515,7 @@
     let res;
     try { res = await API.askBrain(role, text, brainContext(role)); } catch (e) { res = { mode: "error" }; }
     log.pop();
-    log.push({ from: "bot", text: res && res.reply ? res.reply : res && res.mode === "off" ? t("brain_off") : t("brain_error") });
+    log.push({ from: "bot", text: res && res.reply ? res.reply : res && res.mode === "off" ? t(role === "owner" ? "brain_off_owner" : "brain_off") : t("brain_error") });
     if (log.length > 30) log.splice(0, log.length - 30);
     if (byVoice && res && res.reply) brainSpeak(res.reply);
     render();
@@ -642,7 +642,7 @@
       (pref ?'<div class="pref">' + icon("user") + "<span>" + esc(t("preferred")) + ": <b>" + esc(pref.display_name) + '</b></span><button type="button" class="x" data-act="clearpref" aria-label="' + esc(t("cancel")) + '">×</button></div>' : "") +
       (suggHtml ?secO("sugg", t("suggested"), false) + suggHtml + secC : "") +
       '<button class="btn solid block xl" type="submit">' + esc(t("send_request")) + "</button>" +
-      '<p class="fine center">' + esc(t("privacy_note")) + "</p></form>" + brainCard("customer");
+      '<p class="fine center">' + esc(t("privacy_note")) + "</p></form>";
   }
 
   // ── customer: orders ──
@@ -918,8 +918,8 @@
   function vMyJobs() {
     const jobs = S.data.jobs;
     if (S.data.loading && !jobs) return loading();
-    if (!jobs || !jobs.length) return '<h1 class="title">' + esc(t("tab_myjobs")) + "</h1>" + dateStrip() + radioCard() + empty("check", t("no_jobs"));
-    return '<h1 class="title">' + esc(t("tab_myjobs")) + "</h1>" + dateStrip() + radioCard() + brainCard("worker") + jobs.map((b) => '<article class="card order">' +
+    if (!jobs || !jobs.length) return '<h1 class="title">' + esc(t("tab_myjobs")) + "</h1>" + dateStrip() + empty("check", t("no_jobs"));
+    return '<h1 class="title">' + esc(t("tab_myjobs")) + "</h1>" + dateStrip() + jobs.map((b) => '<article class="card order">' +
       '<div class="row between"><b class="code">' + esc(b.code) + '</b><span class="pill st-' + b.status + '">' + esc(t("st_" + b.status)) + "</span></div>" +
       "<h3>" + esc(svcName(b.service)) + "</h3>" +
       '<p class="meta">' + icon("clock") + esc(b.urgency === "asap" ? t("asap") : when(b.scheduled_at)) + " · " + money(b.budget) + (b.hours_est ? " · " + b.hours_est + " h" : "") + "</p>" +

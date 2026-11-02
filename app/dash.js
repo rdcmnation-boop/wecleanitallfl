@@ -9,6 +9,7 @@
   Object.assign(I.es, {
     m_home: "Inicio", m_schedule: "Agenda", m_ratings: "Calificaciones", m_career: "Capacitación y carrera", m_tips: "Consejos",
     m_help: "Ayuda", m_menu: "Menú", tab_home: "Inicio", tab_more: "Más",
+    brain_off_owner: "La IA se activa al agregar la clave de Claude (máximo $10 al mes). Mientras tanto, usa el resumen del panel.",
     sign_out: "Cerrar sesión", log_out: "Cerrar sesión", sign_out_q: "¿Cerrar sesión?",
     sign_out_all: "Cerrar sesión en todos mis dispositivos",
     sign_out_guest: "Estás usando la app sin cuenta. Si cierras sesión, pierdes el acceso a tus pedidos en este teléfono. Guarda tu cuenta primero.",
@@ -60,6 +61,7 @@
   Object.assign(I.en, {
     m_home: "Home", m_schedule: "Schedule", m_ratings: "Ratings", m_career: "Training & career", m_tips: "Tips",
     m_help: "Help", m_menu: "Menu", tab_home: "Home", tab_more: "More",
+    brain_off_owner: "AI turns on when the Claude key is added ($10/month max). For now, use the panel summary.",
     sign_out: "Log out", log_out: "Log out", sign_out_q: "Log out?",
     sign_out_all: "Log out on all my devices",
     sign_out_guest: "You're using the app without an account. If you log out, you lose access to your orders on this phone. Save your account first.",
