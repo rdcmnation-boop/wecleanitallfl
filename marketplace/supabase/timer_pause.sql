@@ -27,3 +27,7 @@ end $$;
 
 grant execute on function public.pause_job(uuid) to authenticated;
 grant execute on function public.resume_job(uuid) to authenticated;
+
+-- Only signed-in cleaners may call these (applied to the live project on 2026-11-02).
+revoke execute on function public.pause_job(uuid) from public, anon;
+revoke execute on function public.resume_job(uuid) from public, anon;
