@@ -274,3 +274,25 @@ const STARTUP_EN = [
 ];
 window.WCIA_LEARN.es.startup = STARTUP_ES;
 window.WCIA_LEARN.en.startup = STARTUP_EN;
+
+// Cleaning industry news. Each item was checked against its page; dates are the publication dates shown there.
+// Newest first. Updated by hand; the date shown is when it was added to the app.
+const NEWS_ES = [
+  { date: "2026-09-03", src: "CMM / ISSA Today", url: "https://cmmonline.com/news/check-out-the-septemberoctober-2026-issa-today-digital-issue", text: "Edición sept./oct. 2026 de ISSA Today: vista previa del ISSA Show North America 2026, investigación sobre productos de limpieza y salud respiratoria, sostenibilidad e internet de las cosas (IoT)." },
+  { date: "2026-02-17", src: "CMM (IBISWorld)", url: "https://cmmonline.com/news/u-s-janitorial-services-market-projected-to-grow-nearly-2-in-2026", text: "EE. UU.: IBISWorld prevé que los ingresos de los servicios de conserjería lleguen a unos US$112 mil millones en 2026 (+1.8%). Los salarios son el gasto más grande: 43.2% de los ingresos." },
+  { date: "2025-07-21", src: "CMM (ResearchAndMarkets)", url: "https://cmmonline.com/news/global-janitorial-services-market-posts-single-digit-growth", text: "Mundial: el sector creció cerca de 4.27% al año entre 2021 y 2024, y se proyecta llegar a unos US$420 mil millones en 2031." }
+];
+const NEWS_EN = [
+  { date: "2026-09-03", src: "CMM / ISSA Today", url: "https://cmmonline.com/news/check-out-the-septemberoctober-2026-issa-today-digital-issue", text: "ISSA Today Sept./Oct. 2026 issue: preview of ISSA Show North America 2026, research on cleaning products and respiratory health, sustainability, and IoT." },
+  { date: "2026-02-17", src: "CMM (IBISWorld)", url: "https://cmmonline.com/news/u-s-janitorial-services-market-projected-to-grow-nearly-2-in-2026", text: "U.S.: IBISWorld expects janitorial services revenue to reach about US$112 billion in 2026 (+1.8%). Wages are the largest expense at 43.2% of revenue." },
+  { date: "2025-07-21", src: "CMM (ResearchAndMarkets)", url: "https://cmmonline.com/news/global-janitorial-services-market-posts-single-digit-growth", text: "Worldwide: the sector grew about 4.27% a year from 2021 to 2024 and is forecast to reach about US$420 billion by 2031." }
+];
+window.WCIA_LEARN.es.news = NEWS_ES;
+window.WCIA_LEARN.en.news = NEWS_EN;
+
+// Stations with a stream address supplied by the owner (region: "fl" or "pe").
+// Only https stream addresses play. An empty url shows the station as pending.
+window.WCIA_RADIO_MANUAL = [
+  { region: "pe", name: "Radio Onda Perú · Islay 105.5 FM", state: "Islay, Arequipa", url: "" }
+];
+

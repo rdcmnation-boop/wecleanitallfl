@@ -1,7 +1,11 @@
 // Text in Spanish and English. Keep words few and plain.
 window.WCIA_I18N = {
   es: {
-    now_title: "¿Necesitas limpieza ya?", now_hint: "Elige el servicio y tu código postal. Los limpiadores disponibles en tu zona reciben la solicitud primero.", now_live: "En vivo", now_btn: "Buscar limpiador ahora", now_fine: "Te mostramos en Pedidos cuando un limpiador acepte.",
+    radio_title: "Radio mientras trabajas", radio_hint: "Emisoras de Florida y Perú. Escúchalas aquí, dentro de la app.", radio_play: "Escuchar", radio_pause: "Pausar", radio_stop: "Parar",
+    radio_all: "Todo", radio_music: "Música", radio_live: "EN VIVO", radio_ready: "LISTO", radio_pick: "Elige una emisora", radio_prev: "Anterior", radio_next: "Siguiente", radio_pending: "Falta el enlace de transmisión", radio_loading: "Cargando emisoras…", radio_empty: "No hay emisoras disponibles ahora.", radio_load_fail: "No pudimos cargar las emisoras. Revisa tu conexión.", radio_fail_play: "Esta emisora no se pudo reproducir. Prueba otra.",
+    today: "Hoy", next_visit: "Próxima visita", clock_label: "Hora local", timer_pause: "Pausar", timer_resume: "Seguir", timer_paused: "En pausa",
+    news_title: "Noticias de limpieza", news_hint: "Fuentes de la industria. Cada nota muestra su fecha y su fuente.", news_source: "Fuente",
+    now_title:"¿Necesitas limpieza ya?", now_hint: "Elige el servicio y tu código postal. Los limpiadores disponibles en tu zona reciben la solicitud primero.", now_live: "En vivo", now_btn: "Buscar limpiador ahora", now_fine: "Te mostramos en Pedidos cuando un limpiador acepte.",
     learn_start_title: "Cómo empezar tu negocio de limpieza", learn_start_hint: "Pasos generales para quien quiere empezar. No es asesoría legal, de impuestos ni de seguros; confírmalo con un profesional.",
     brand_sub: "Limpieza a tu medida",
     hero_title: "Limpieza fácil.",
@@ -148,6 +152,10 @@ window.WCIA_I18N = {
     err_date_far: "Escoge una fecha dentro de los próximos 6 meses."
   },
   en: {
+    radio_title: "Radio while you work", radio_hint: "Florida and Perú stations. Listen right here in the app.", radio_play: "Listen", radio_pause: "Pause", radio_stop: "Stop",
+    radio_all: "All", radio_music: "Music", radio_live: "ON AIR", radio_ready: "READY", radio_pick: "Pick a station", radio_prev: "Previous", radio_next: "Next", radio_pending: "Stream link pending", radio_loading: "Loading stations…", radio_empty: "No stations available right now.", radio_load_fail: "We couldn't load the stations. Check your connection.", radio_fail_play: "This station couldn't play. Try another.",
+    today: "Today", next_visit: "Next visit", clock_label: "Local time", timer_pause: "Pause", timer_resume: "Resume", timer_paused: "Paused",
+    news_title: "Cleaning industry news", news_hint: "Industry sources. Each item shows its date and source.", news_source: "Source",
     now_title: "Need a cleaner now?", now_hint: "Pick a service and your ZIP code. Cleaners who are online in your area get the request first.", now_live: "Live", now_btn: "Find a cleaner now", now_fine: "We'll show you in Orders when a cleaner accepts.",
     learn_start_title: "How to start your cleaning business", learn_start_hint: "General steps for anyone starting out. Not legal, tax or insurance advice; confirm those with a professional.",
     brand_sub: "Cleaning made simple",

@@ -517,3 +517,61 @@ select{appearance:none;background-image:linear-gradient(45deg,transparent 50%,va
   .card,.tile,.btn,.chip span,.seg-opt span,.tabbar button .ic{transition:none}
   .card:hover,.tile:hover,.tabbar button.on .ic{transform:none}
 }
+
+/* Live clock and date (ride-app header) and the job timer with pause */
+.date-strip{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap;margin:6px 0 14px;padding:14px 16px;border-radius:20px;
+  background:linear-gradient(160deg,rgba(18,40,26,.9),rgba(6,14,9,.95));border:1px solid rgba(162,234,79,.25);box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 18px 30px -22px rgba(162,234,79,.45)}
+.date-strip p{margin:0;display:flex;flex-direction:column;gap:2px}
+.date-strip small{color:var(--muted);font-size:12px}
+.clock-now{font:800 30px/1 var(--display);letter-spacing:.01em;font-variant-numeric:tabular-nums;color:var(--lime-hot);text-shadow:0 0 18px rgba(162,234,79,.45)}
+.day-line{text-align:right;align-items:flex-end}
+.day-line span{font:700 15px var(--display);color:var(--text)}
+.job-timer{display:flex;align-items:center;gap:8px;margin:0;padding:10px 12px;border-radius:14px;background:rgba(162,234,79,.1);box-shadow:inset 0 0 0 1px rgba(162,234,79,.3)}
+.job-timer .tval{font:800 22px/1 var(--display);font-variant-numeric:tabular-nums;color:var(--lime-hot);margin-left:4px}
+.job-timer.paused{background:rgba(255,207,90,.1);box-shadow:inset 0 0 0 1px rgba(255,207,90,.4)}
+.job-timer.paused .tval{color:var(--warn)}
+.paused-tag{margin-left:8px;color:var(--warn);font:700 12px var(--display);text-transform:uppercase;letter-spacing:.08em}
+.job-actions{display:grid;grid-template-columns:1fr 1.4fr;gap:10px}
+.job-actions .btn{min-height:56px;width:100%}
+
+/* Radio while working */
+.radio-regions{margin-bottom:2px}
+.radio-now{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 12px;border-radius:14px;background:rgba(162,234,79,.1);box-shadow:inset 0 0 0 1px rgba(162,234,79,.3)}
+.radio-now b{flex:1;min-width:120px;overflow:hidden;text-overflow:ellipsis}
+.radio-dot{width:10px;height:10px;border-radius:50%;background:var(--faint);flex:none}
+.radio-dot.live{background:var(--lime);box-shadow:0 0 12px var(--lime);animation:pulse 1.4s ease-in-out infinite}
+.radio-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.radio-item{width:100%;text-align:left;display:flex;flex-direction:column;gap:2px;padding:12px 14px;border-radius:14px;border:1px solid var(--line-2);background:var(--card);color:var(--text);cursor:pointer;font:inherit;min-height:52px}
+.radio-item b{font:700 15px var(--display)}
+.radio-item small{color:var(--muted);font-size:12px}
+.radio-item.on{border-color:var(--lime);box-shadow:0 0 16px -6px rgba(162,234,79,.6)}
+.bad-text{color:var(--bad)}
+
+/* Car-radio card for the radio (own design, in the app's black and lime green) */
+.radio-car{background:radial-gradient(120% 90% at 50% -20%,rgba(162,234,79,.16),transparent 60%),linear-gradient(170deg,#0c1610,#030605 70%);border-color:rgba(162,234,79,.38);box-shadow:0 26px 50px -30px rgba(162,234,79,.5),inset 0 1px 0 rgba(255,255,255,.07)}
+.car-screen{position:relative;overflow:hidden;display:flex;flex-direction:column;gap:4px;padding:16px 16px 14px;border-radius:18px;background:linear-gradient(180deg,#0c1610,#030605);box-shadow:inset 0 0 0 1px rgba(162,234,79,.35),inset 0 0 26px rgba(162,234,79,.1),0 0 24px -10px rgba(162,234,79,.55)}
+.car-screen::after{content:"";position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(180deg,rgba(255,255,255,.03) 0 1px,transparent 1px 3px)}
+.car-tag{align-self:flex-start;font:800 11px/1 var(--display);letter-spacing:.2em;color:var(--lime);text-shadow:0 0 8px rgba(162,234,79,.7)}
+.car-tag.live{color:var(--lime-hot);text-shadow:0 0 10px rgba(162,234,79,.9);animation:carblink 1.2s steps(2,start) infinite}
+@keyframes carblink{to{visibility:hidden}}
+.car-name{font:800 26px/1.1 var(--display);color:var(--text);text-shadow:0 0 14px rgba(162,234,79,.45);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.car-meta{color:var(--muted);font-size:13px;min-height:1em}
+.car-eq{display:flex;align-items:flex-end;gap:4px;height:28px;margin-top:6px}
+.car-eq i{width:6px;height:6px;border-radius:2px;background:linear-gradient(180deg,var(--lime-hot),var(--lime))}
+.car-eq.on i{animation:careq .9s ease-in-out infinite}
+.car-eq.on i:nth-child(2){animation-delay:.15s}
+.car-eq.on i:nth-child(3){animation-delay:.3s}
+.car-eq.on i:nth-child(4){animation-delay:.45s}
+.car-eq.on i:nth-child(5){animation-delay:.6s}
+.car-eq.on i:nth-child(6){animation-delay:.75s}
+@keyframes careq{0%,100%{height:6px}50%{height:28px}}
+.car-dial{position:relative;height:18px;margin:10px 4px 6px;border-radius:9px;background:repeating-linear-gradient(90deg,rgba(255,255,255,.3) 0 1px,transparent 1px 12px),linear-gradient(90deg,#14261a,#060c08);box-shadow:inset 0 0 0 1px rgba(162,234,79,.25)}
+.car-needle{position:absolute;top:-4px;bottom:-4px;width:3px;margin-left:-1.5px;border-radius:2px;background:var(--lime);box-shadow:0 0 10px var(--lime);transition:left .4s cubic-bezier(.2,.8,.2,1)}
+.car-controls{display:flex;align-items:center;justify-content:center;gap:14px}
+.car-btn,.car-play{display:grid;place-items:center;border:0;cursor:pointer;color:var(--text);font:800 18px/1 var(--display);padding:0;transition:transform .12s ease,box-shadow .12s ease}
+.car-btn{width:52px;height:52px;border-radius:50%;background:linear-gradient(180deg,#14261a,#0a1409);box-shadow:inset 0 1px 0 rgba(255,255,255,.1),0 6px 0 #030605,0 0 0 1px rgba(162,234,79,.3)}
+.car-btn:active{transform:translateY(3px);box-shadow:inset 0 1px 0 rgba(255,255,255,.1),0 3px 0 #030605,0 0 0 1px rgba(162,234,79,.3)}
+.car-play{width:72px;height:72px;border-radius:50%;color:var(--leaf);background:linear-gradient(180deg,#c9f78c,var(--lime) 45%,#86d23a);box-shadow:0 7px 0 #3f7019,0 0 26px rgba(162,234,79,.45)}
+.car-play:active{transform:translateY(4px);box-shadow:0 3px 0 #3f7019,0 0 26px rgba(162,234,79,.45)}
+.car-stop{font-size:14px}
+@media (prefers-reduced-motion:reduce){.car-eq i,.car-tag.live{animation:none}.car-needle{transition:none}}

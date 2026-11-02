@@ -210,6 +210,8 @@
       myJobs: () => rpc("my_jobs"),
       startJob: (id) => rpc("start_job", { p_booking: id }),
       completeJob: (id) => rpc("complete_job", { p_booking: id }),
+      pauseJob: (id) => rpc("pause_job", { p_booking: id }),
+      resumeJob: (id) => rpc("resume_job", { p_booking: id }),
       shareLocation: (id, lat, lng) => rpc("share_location", { p_booking: id, p_lat: lat, p_lng: lng }),
       notifications: () => rest("/notifications?select=id,template,payload,created_at,read_at&channel=eq.inapp&order=created_at.desc&limit=30"),
       markRead: () => rpc("mark_notifications_read"),
@@ -526,6 +528,8 @@
           .map((b) => { const c = P(db, b.customer_id); const r = db.reviews.find((x) => x.booking_id === b.id); return Object.assign({}, b, { customer: { name: c.full_name, phone: c.phone }, review: r ? { rating: r.rating, comment: r.comment } : null }); });
       },
       async startJob(id) { const db = load(); const b = db.bookings.find((x) => x.id === id && x.worker_id === uid && x.status === "assigned"); need(b); b.status = "in_progress"; b.started_at = now(); save(db); },
+      async pauseJob(id) { const db = load(); const b = db.bookings.find((x) => x.id === id && x.worker_id === uid && x.status === "in_progress" && !x.paused_at); need(b); b.paused_at = now(); save(db); },
+      async resumeJob(id) { const db = load(); const b = db.bookings.find((x) => x.id === id && x.worker_id === uid && x.status === "in_progress" && x.paused_at); need(b); b.paused_seconds = (b.paused_seconds || 0) + Math.max(0, Math.floor((Date.now() - Date.parse(b.paused_at)) / 1000)); b.paused_at = null; save(db); },
       async workerReviews(id) { await tick(); return reviewSummary(load(), id); },
       async myReviews() { await tick(); return reviewSummary(load(), uid); },
       async adminLiveJobs(zip) { const db = load(); need(db.admins.includes(uid), "admin_only"); return db.bookings.filter((b) => b.status === "in_progress" && b.worker_lat != null && (!zip || b.zip === zip)).map((b) => ({ id: b.id, code: b.code, service: b.service, zip: b.zip, city: b.city, lat: b.worker_lat, lng: b.worker_lng, location_at: b.location_at, worker: (P(db, b.worker_id) || {}).full_name || "" })); },
