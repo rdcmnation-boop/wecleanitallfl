@@ -11,7 +11,7 @@ const [s2, t2] = m.render("booking_received", p, "es");
 ok("es subject", s2.startsWith("Recibimos tu solicitud"));
 ok("es text", t2.includes("total $179.20"));
 ok("asap en", m.render("booking_received", { ...p, urgency: "asap" }, "en")[1].includes("as soon as possible"));
-for (const k of ["booking_assigned","booking_reassigning","cleaner_on_way","job_started","booking_completed","booking_cancelled","job_offer","job_assigned","job_late_reminder","worker_approved","agent_alert"])
+for (const k of ["booking_assigned","booking_reassigning","cleaner_on_way","job_started","booking_completed","booking_cancelled","payment_authorized","job_offer","job_assigned","job_late_reminder","worker_approved","agent_alert"])
   for (const l of ["es","en"]) { const [s,t] = m.render(k, { code: "WC-9", service: "deep", zip: "33101", title: "x", agent: "ops" }, l); ok(k+"/"+l, s && t && !t.includes("undefined")); }
 ok("unknown template safe", m.render("nope", {}, "en")[0] === "We Clean It All");
 console.log(`notify templates: ${total - fails}/${total} pass`);

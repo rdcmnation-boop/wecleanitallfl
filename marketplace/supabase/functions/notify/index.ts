@@ -26,6 +26,10 @@ const MSG: Record<string, { es: (p: P) => [string, string]; en: (p: P) => [strin
     es: (p) => [`Recibimos tu solicitud ${p.code}`, `We Clean It All: recibimos tu solicitud ${p.code} (${p.service}, ${when(p, "es")}${p.total ? ", total " + money(p.total) : ""}). Te avisamos cuando un limpiador la acepte. Síguela aquí: ${APP}`],
     en: (p) => [`We received your request ${p.code}`, `We Clean It All: we received your request ${p.code} (${p.service}, ${when(p, "en")}${p.total ? ", total " + money(p.total) : ""}). We'll let you know when a cleaner accepts it. Track it here: ${APP}`],
   },
+  payment_authorized: {
+    es: (p) => [`Pago confirmado (${p.code})`, `We Clean It All: confirmamos tu pago de ${money(p.total)} para ${p.code}. Solo se cobra cuando el trabajo esté hecho. Ya estamos buscando tu limpiador.`],
+    en: (p) => [`Payment confirmed (${p.code})`, `We Clean It All: we confirmed your payment of ${money(p.total)} for ${p.code}. You're only charged once the job is done. We're finding your cleaner now.`],
+  },
   booking_assigned: {
     es: (p) => [`Tu limpieza ${p.code} tiene limpiador`, `We Clean It All: tu limpieza ${p.code} ya tiene limpiador asignado. Síguelo aquí: ${APP}`],
     en: (p) => [`Your cleaning ${p.code} has a cleaner`, `We Clean It All: your cleaning ${p.code} now has a cleaner assigned. Follow it here: ${APP}`],
@@ -122,7 +126,9 @@ async function twilio(form: Record<string, string>): Promise<string> {
     headers: { Authorization: "Basic " + btoa(`${sid}:${tok}`), "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams(form),
   });
-  return r.ok ? "sent" : `fail:${r.status}:${(await r.text()).slice(0, 200)}`;
+  if (r.ok) return "sent";
+  const j = await r.json().catch(() => ({} as Record<string, unknown>));
+  return `fail:${r.status}:${(j as Record<string, unknown>).code ?? ""}`;   // Twilio error code only (e.g. 21610 = recipient replied STOP)
 }
 
 // Twilio WhatsApp. Business-started messages outside a 24-hour chat need an approved template (TWILIO_CONTENT_<template>);
@@ -156,7 +162,8 @@ async function sendEmail(email: string, n: Note): Promise<string> {
 
 Deno.serve(async (req) => {
   if (!(await allowed(req))) return new Response("forbidden", { status: 403 });
-  const q = await fetch(`${SB}/rest/v1/notifications?status=eq.queued&channel=neq.inapp&order=id.asc&limit=50`, { headers: sbHeaders });
+  const due = encodeURIComponent(new Date().toISOString());
+  const q = await fetch(`${SB}/rest/v1/notifications?status=eq.queued&channel=neq.inapp&next_attempt_at=lte.${due}&order=id.asc&limit=50`, { headers: sbHeaders });
   const notes: Note[] = q.ok ? await q.json() : [];
   const results: Record<string, number> = {};
   for (const n of notes) {
@@ -175,12 +182,20 @@ Deno.serve(async (req) => {
     } else if (n.channel === "sms" && phone) out = await sendSms(phone, n);
     else if (n.channel === "email") out = await sendEmail(prof?.email, n);
     if (out.startsWith("skip:no_") && out !== "skip:no_phone") { results.waiting = (results.waiting ?? 0) + 1; continue; }
-    const status = out === "sent" ? "sent" : out.startsWith("skip") ? "skipped" : "failed";
+    // Carrier STOP (Twilio 21610): opt the person out of texts and drop their queued texts.
+    if (n.channel === "sms" && out.includes(":21610")) {
+      await fetch(`${SB}/rest/v1/rpc/sms_opted_out`, { method: "POST", headers: sbHeaders, body: JSON.stringify({ p_user: n.user_id }) });
+      results.opted_out = (results.opted_out ?? 0) + 1; continue;
+    }
+    if (out.startsWith("skip")) {
+      await fetch(`${SB}/rest/v1/notifications?id=eq.${n.id}`, { method: "PATCH", headers: sbHeaders, body: JSON.stringify({ status: "skipped", error: out }) });
+      results.skipped = (results.skipped ?? 0) + 1; continue;
+    }
+    // sent → done; failure → retried 1, 5, 30 min, 2 h, then failed + owner alert (decided by the database).
+    const r = await fetch(`${SB}/rest/v1/rpc/notification_result`, { method: "POST", headers: sbHeaders,
+      body: JSON.stringify({ p_id: n.id, p_ok: out === "sent", p_error: out === "sent" ? null : out }) });
+    const status = r.ok ? String(await r.json()) : "error";
     results[status] = (results[status] ?? 0) + 1;
-    await fetch(`${SB}/rest/v1/notifications?id=eq.${n.id}`, {
-      method: "PATCH", headers: sbHeaders,
-      body: JSON.stringify({ status, sent_at: status === "sent" ? new Date().toISOString() : null, error: status === "sent" ? null : out }),
-    });
   }
   return Response.json({ processed: notes.length, ...results });
 });

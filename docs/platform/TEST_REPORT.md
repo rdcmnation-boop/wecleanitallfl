@@ -41,3 +41,18 @@ Only tests that actually ran are listed. All database tests run inside a transac
 1. **HIGH:** suspended/unapproved providers can continue an already-assigned job (start, on-the-way, complete, location). Proposed fix: every job action calls `provider_block_reason`-style status check (approved), and suspension triggers owner alert + re-dispatch of their open jobs.
 2. MEDIUM: market pause policy for existing bookings.
 3. Release blocked for payments/robotics features until built and tested.
+
+## Staging launch evidence — 2026-11-02/03 (Supabase `wcia-staging`, synthetic people only, every SQL suite rolled back)
+| Suite | Result | What it proves |
+|---|---|---|
+| Backup checksums (production, read-only) | 32/32 tables identical | backup is exact; 0 uploaded files exist |
+| Restore drill (production structure, rolled back) | 32 tables, 254 rows, 0 mismatches | backup can be restored |
+| Schema parity | 588/588 objects | staging = production |
+| `test/orchestration_test.sql` | 54/54 (re-run after payments: 54/54) | lifecycle, assignment race, cancel, owner override, retries, crash recovery, duplicate bookings/webhooks, append-only history, AI limits, only Miami-Dade + Broward open |
+| Notification routing (inline) | 11/11 | email customers, guest texts, cleaner WhatsApp, queued until keys |
+| `test/notify_templates.test.mjs` | 31/31 | every message in Spanish + English, subjects, ET time, totals |
+| `test/payments_test.sql` | 53/53 | SIMULATED Stripe events: unpaid hidden from cleaners, declines, amount mismatch, live-mode lock, duplicate auth/capture/transfer/refund, balanced ledger, payout gate (approval, onboarding, payouts enabled, mode), owner-only refunds, cancel/release, outage retry, SMS consent + STOP, email retry ×5 then alert |
+| `test/stripe_functions.test.mjs` | 39/39 | real HMAC signature checks (wrong secret, tampered, replay, forged), duplicate webhook, live event ignored, failure → 500 so Stripe retries, live key refused, idempotency keys on every call, no secrets in code or app |
+| Live staging calls | 9/9 as designed | notify 403/403/200; webhook 400/400; payments 403/200/401; queue probe → `stripe_not_configured` |
+
+**Not yet proven (needs keys):** a real Stripe test-mode payment, decline card, capture, refund and Connect payout; real email delivery through Resend; real SMS. These are NOT claimed to work until run.
