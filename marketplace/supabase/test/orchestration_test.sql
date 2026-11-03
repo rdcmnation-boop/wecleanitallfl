@@ -13,6 +13,17 @@ begin
   return v_out;
 end $f$;
 
+
+-- Job proof for suites that are not about the job itself: the checklist is ticked and two photo files are recorded
+-- (a SIMULATED upload: rows in storage.objects; the real upload through the Storage API is proven by the end-to-end run).
+create or replace function pg_temp.job_proof(p_b uuid) returns void language plpgsql as $f$
+declare w text := (select worker_id::text from public.bookings where id = p_b);
+begin
+  update public.job_checklist_items set done_at = now() where booking_id = p_b;
+  insert into storage.objects(bucket_id, name, owner_id) values ('job-photos', p_b || '/before/t1.jpg', w), ('job-photos', p_b || '/after/t2.jpg', w);
+  insert into public.job_photos(booking_id, kind, path, uploaded_by) values (p_b, 'before', p_b || '/before/t1.jpg', w::uuid), (p_b, 'after', p_b || '/after/t2.jpg', w::uuid);
+end $f$;
+
 do $do$
 declare res text[] := '{}'; fails int; r text; r2 text; n int; j bigint; j2 bigint; s text;
   v_admin uuid; u_c uuid := gen_random_uuid(); u_c2 uuid := gen_random_uuid(); u_w uuid := gen_random_uuid(); u_w2 uuid := gen_random_uuid();
@@ -72,11 +83,12 @@ begin
   res := res || ('accept_history: ' || case when s='ACCEPTED>ASSIGNED' then 'PASS' else 'FAIL '||coalesce(s,'') end);
 
   -- 4 service: start, complete, offline close
-  r := pg_temp.val_as('authenticated', c_w2, format($q$select public.start_job('%s')::text$q$, b1));
+  r := pg_temp.val_as('authenticated', c_w2, format($q$select public.check_in('%s', 25.77, -80.19)::text$q$, b1));
   res := res || ('other_worker_cannot_start: ' || case when r like '%not_allowed%' then 'PASS' else 'FAIL '||coalesce(r,'null') end);
-  r := pg_temp.val_as('authenticated', c_w, format($q$select public.start_job('%s')::text$q$, b1));
+  r := pg_temp.val_as('authenticated', c_w, format($q$select public.check_in('%s', 25.77, -80.19)::text$q$, b1));
   res := res || ('worker_starts: ' || case when (select workflow_state from public.bookings where id=b1)='IN_PROGRESS' then 'PASS' else 'FAIL '||coalesce(r,'null') end);
-  r := pg_temp.val_as('authenticated', c_w, format($q$select public.complete_job('%s')::text$q$, b1));
+  perform pg_temp.job_proof(b1);
+  r := pg_temp.val_as('authenticated', c_w, format($q$select public.check_out('%s')::text$q$, b1));
   res := res || ('complete_closes_offline: ' || case when (select workflow_state from public.bookings where id=b1)='CLOSED_OFFLINE' then 'PASS' else 'FAIL '||coalesce(r,'null')||' '||(select workflow_state from public.bookings where id=b1) end);
   res := res || ('no_fake_payment_state: ' || case when not exists (select 1 from public.domain_events where aggregate_id=b1::text and to_state in ('PAYMENT_AUTHORIZED','PAYMENT_CAPTURED','SETTLED')) then 'PASS' else 'FAIL' end);
 
@@ -117,10 +129,11 @@ begin
   r := pg_temp.val_as('authenticated', c_user2, format(ins, 'deep', '33130', 220));
   b4 := r::uuid;
   r := pg_temp.val_as('authenticated', c_w, format($q$select public.accept_offer((select id from public.job_offers where booking_id='%s' and worker_id=auth.uid()))$q$, b4));
-  r := pg_temp.val_as('authenticated', c_w, format($q$select public.start_job('%s')::text$q$, b4));
+  r := pg_temp.val_as('authenticated', c_w, format($q$select public.check_in('%s', 25.77, -80.19)::text$q$, b4));
   update public.workers set status='suspended' where id=u_w;
   res := res || ('in_progress_suspension_alerts_owner: ' || case when exists (select 1 from public.agent_tasks where dedupe_key='in_progress_lost:'||b4) then 'PASS' else 'FAIL' end);
-  r := pg_temp.val_as('authenticated', c_w, format($q$select public.complete_job('%s')::text$q$, b4));
+  perform pg_temp.job_proof(b4);
+  r := pg_temp.val_as('authenticated', c_w, format($q$select public.check_out('%s')::text$q$, b4));
   res := res || ('suspended_cleaner_cannot_complete: ' || case when r like '%not_approved%' and (select status from public.bookings where id=b4)='in_progress' then 'PASS' else 'FAIL '||coalesce(r,'null') end);
   update public.workers set status='approved' where id=u_w;
 

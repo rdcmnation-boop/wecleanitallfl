@@ -5,6 +5,17 @@ create or replace function pg_temp.val_as(p_role text, p_claims text, p_sql text
 declare v_out text; begin begin execute format('set local role %I', p_role); perform set_config('request.jwt.claims', p_claims, true); execute p_sql into v_out;
 exception when others then v_out := sqlerrm; end; reset role; perform set_config('request.jwt.claims', '', true); return v_out; end $f$;
 
+
+-- Job proof for suites that are not about the job itself: the checklist is ticked and two photo files are recorded
+-- (a SIMULATED upload: rows in storage.objects; the real upload through the Storage API is proven by the end-to-end run).
+create or replace function pg_temp.job_proof(p_b uuid) returns void language plpgsql as $f$
+declare w text := (select worker_id::text from public.bookings where id = p_b);
+begin
+  update public.job_checklist_items set done_at = now() where booking_id = p_b;
+  insert into storage.objects(bucket_id, name, owner_id) values ('job-photos', p_b || '/before/t1.jpg', w), ('job-photos', p_b || '/after/t2.jpg', w);
+  insert into public.job_photos(booking_id, kind, path, uploaded_by) values (p_b, 'before', p_b || '/before/t1.jpg', w::uuid), (p_b, 'after', p_b || '/after/t2.jpg', w::uuid);
+end $f$;
+
 do $do$
 declare res text[] := '{}'; fails int; r text; s text; n int; j bigint;
   v_admin uuid := gen_random_uuid(); u_c uuid := gen_random_uuid(); u_w uuid := gen_random_uuid(); u_g uuid := gen_random_uuid();
@@ -53,8 +64,9 @@ begin
 
   -- E. job done → capture queued once; capture confirmed → ledger balanced; duplicate capture webhook no-op
   r := pg_temp.val_as('authenticated', c_w, format($q$select public.accept_offer((select id from public.job_offers where booking_id='%s' and worker_id=auth.uid()))$q$, b1));
-  r := pg_temp.val_as('authenticated', c_w, format($q$select public.start_job('%s')::text$q$, b1));
-  r := pg_temp.val_as('authenticated', c_w, format($q$select public.complete_job('%s')::text$q$, b1));
+  r := pg_temp.val_as('authenticated', c_w, format($q$select public.check_in('%s', 25.77, -80.19)::text$q$, b1));
+  perform pg_temp.job_proof(b1);
+  r := pg_temp.val_as('authenticated', c_w, format($q$select public.check_out('%s')::text$q$, b1));
   res := res || ('completion_queues_capture: ' || case when (select count(*) from public.outbox_jobs where idempotency_key='capture:'||b1)=1 and (select workflow_state from public.bookings where id=b1)='COMPLETED' then 'PASS' else 'FAIL '||coalesce(r,'') end);
   r := public.payment_captured('pi_test_1', 17920, 'ch_test_1');
   res := res || ('capture_recorded: ' || case when r='captured' and (select payment_status from public.bookings where id=b1)='captured' then 'PASS' else 'FAIL '||r end);
