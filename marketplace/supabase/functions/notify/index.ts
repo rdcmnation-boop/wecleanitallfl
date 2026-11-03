@@ -50,6 +50,10 @@ const MSG: Record<string, { es: (p: P) => [string, string]; en: (p: P) => [strin
     es: (p) => [`Tu limpieza ${p.code} está completa`, `We Clean It All: tu limpieza ${p.code} está completa. ¡Califica tu servicio! ${APP}`],
     en: (p) => [`Your cleaning ${p.code} is done`, `We Clean It All: your cleaning ${p.code} is done. Please rate your service: ${APP}`],
   },
+  booking_rescheduled: {
+    es: (p) => [`Nueva hora para ${p.code}`, `We Clean It All: cambiamos la hora de ${p.code} a ${when(p, "es")}. Si no te queda bien, respóndenos o revisa aquí: ${APP}`],
+    en: (p) => [`New time for ${p.code}`, `We Clean It All: ${p.code} has a new time: ${when(p, "en")}. If that doesn't work for you, reply or check here: ${APP}`],
+  },
   booking_cancelled: {
     es: (p) => [`Trabajo ${p.code} cancelado`, `We Clean It All: el trabajo ${p.code} fue cancelado.`],
     en: (p) => [`Job ${p.code} cancelled`, `We Clean It All: job ${p.code} was cancelled.`],

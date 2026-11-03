@@ -146,13 +146,13 @@
   const TABS = {
     customer: [["book", "home", "tab_home"], ["orders", "list", "tab_orders"], ["account", "user", "tab_account"]],
     worker: [],
-    admin: [["panel", "grid", "tab_panel"], ["bookings", "list", "tab_bookings"], ["workers", "users", "tab_workers"], ["system", "spark", "tab_more"]]
+    admin: [["cc", "shield", "tab_cc"], ["panel", "grid", "tab_panel"], ["bookings", "list", "tab_bookings"], ["workers", "users", "tab_workers"], ["system", "spark", "tab_more"]]
   };
   const APP_VERSION = "2026.11.2h";
   let DASH = null;
   const DD = () => DASH || (DASH = window.WCIA_DASH({ t, esc, icon, money, when, svcName, S, CFG, wa, tel, stars, empty, loading, jobTimer, statusBanner, reviewsPanel, role, brainCard, store, tile, lang: () => lang, version: APP_VERSION }));
   // Screens a role can open (tab bar + side menu + sub-screens), so a saved screen is restored after a reload.
-  const SCREENS = { customer: ["book", "orders", "account", "learn", "help", "cleaners"], worker: ["dash", "myjobs", "earnings", "ratings", "account", "profile", "learn", "help"], admin: ["panel", "bookings", "workers", "system", "analytics", "learn", "account", "connectors"] };
+  const SCREENS = { customer: ["book", "orders", "account", "learn", "help", "cleaners"], worker: ["dash", "myjobs", "earnings", "ratings", "account", "profile", "learn", "help"], admin: ["cc", "panel", "bookings", "workers", "system", "analytics", "learn", "account", "connectors"] };
   function startRole() {
     S.screen = "app";
     const r = role();
@@ -209,7 +209,8 @@
       },
       workers: async () => ({ workers: await API.adminWorkers() }),
       bookings: async () => { const [bookings, workers] = await Promise.all([API.adminBookings(), API.adminWorkers()]); return { bookings, workers }; },
-      connectors: async () => ({ stats: await API.adminStats() })
+      connectors: async () => ({ stats: await API.adminStats() }),
+      cc: async () => { try { const d = await CC().load(); return Object.assign({ ccReady: true, ccError: null }, d); } catch (e) { console.error(e); return { ccReady: true, ccError: errMsg(e) === t("error_generic") ? String((e && e.message) || e) : errMsg(e) }; } }
     };
     if (!loaders[tab]) { render(); return; }
     if (!quiet) { S.data.loading = true; render(); }
@@ -363,7 +364,7 @@
     const D = DD();
     const views = { book: vBook, orders: vOrders, cleaners: vCleaners, account: r === "worker" ? D.vAccount : vAccount, jobs: vJobs, myjobs: vMyJobs, learn: vLearn, earnings: r === "worker" ? D.vEarnings : vEarnings, profile: vProfile, panel: vPanel, workers: vWorkers, bookings: vAdminBookings, connectors: vConnectors,
       ratings: D.vRatings, help: D.vHelp,
-      analytics: () => owner().vAnalytics(), system: () => owner().vSystem({ connectors: () => strip(vConnectors()), account: () => strip(vAccount()) }) };
+      cc: () => CC().view(), analytics: () => owner().vAnalytics(), system: () => owner().vSystem({ connectors: () => strip(vConnectors()), account: () => strip(vAccount()) }) };
     const overlays = verifyModal() + reviewsModal() + D.drawer() + D.signOutSheet() + D.notesPage() + D.messagesPage();
     // Cleaner home is full screen, like the Dasher app: zones behind, floating buttons on top, one sheet at the bottom.
     if (r === "worker" && S.tab === "dash") return D.vDash() + '<div id="radioSheetHost"></div>' + overlays;
@@ -379,6 +380,8 @@
     dot.hidden = !unread; dot.textContent = unread > 9 ? "9+" : String(unread || "");
   }
   let OWNER = null;
+  let CCM = null;
+  const CC = () => CCM || (CCM = window.WCIA_CC({ esc, icon, money, when, svcName, S, loading, empty, API, toast, render, lang: () => lang, errMsg, reload: () => loadTab() }));
   const owner = () => OWNER || (OWNER = window.WCIA_OWNER({ t, esc, icon, money, when, svcName, S, tile, loading, empty, wa, CFG, lang: () => lang }));
   // Agent console: runs on the owner's own session. Class D requests only create approvals; nothing runs by itself.
   let CONSOLE = null;
@@ -1165,6 +1168,7 @@
     const a = el.dataset.act, id = el.dataset.id;
     if (el.tagName === "A") return;
     e.preventDefault();
+    if (a && a.startsWith("cc_")) { await CC().act(a, el); return; }
     if (a === "lang") { lang = lang === "es" ? "en" : "es"; store.set("wcia_lang", lang); document.documentElement.lang = lang; render(); }
     else if (a === "auth") { S.authRole = el.dataset.role; S.form.kind = "individual"; S.screen = "signup"; render(); }
     else if (a === "signin") { S.signinAs = el.dataset.as || (S.screen === "signup" ? S.authRole : S.screen === "forgot" ? S.signinAs : null); S.screen = "signin"; render(); }
@@ -1344,7 +1348,7 @@
   root.addEventListener("mouseleave", () => tipEl.classList.remove("in"));
   window.addEventListener("scroll", () => tipEl.classList.remove("in"), { passive: true });
   root.addEventListener("keydown", (e) => {
-    if ((e.key === "Enter" || e.key === " ") && e.target.matches('[role="button"][data-act]')) { e.preventDefault(); e.target.click(); }
+    if ((e.key === "Enter" || e.key === " ") && e.target.matches('[role="button"][data-act], tr.cc-row[data-act]')) { e.preventDefault(); e.target.click(); }
   });
 
   root.addEventListener("change", async (e) => {
@@ -1418,6 +1422,7 @@
     e.preventDefault();
     const form = e.target, kind = form.dataset.form, d = formData(form);
     if (kind === "brain") { await brainAsk(form); return; }
+    if (kind === "cc_search") { CC().searchSubmit(d.q); return; }
     const invalid = [...form.querySelectorAll("input[required]")].find((i) => !i.checkValidity());
     if (invalid && kind !== "dir") { const sec = invalid.closest("details"); if (sec && !sec.open) sec.open = true; invalid.focus(); invalid.reportValidity && invalid.reportValidity(); return; }
     try {

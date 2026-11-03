@@ -243,6 +243,8 @@
       adminCloseTask: (id, status) => rpc("admin_close_task", { p_id: id, p_status: status }),
       adminSetOwnerWhatsApp: (phone) => rpc("admin_set_owner_whatsapp", { p_phone: phone }),
       payInfo: () => rpc("pay_info"),
+      // Command Center: any cc_* / admin_* read model; the database checks the owner (2-step) on every call.
+      cc: (fn, args) => { if (!/^(cc_|admin_)[a-z_]+$/.test(fn)) throw new ApiError("not_allowed"); return rpc(fn, args || {}); },
       adminMoney: () => rpc("admin_money"),
       adminSetFees: (pct, instant) => rpc("admin_set_fees", { p_fee_pct: pct, p_instant_fee: instant }),
       adminSaveAgentSettings: (cap, autoSend, model, messagingOn) => rpc("admin_save_agent_settings", { p_cap: cap, p_auto_send: autoSend, p_model: model, p_messaging_on: messagingOn }),
@@ -577,6 +579,8 @@
       },
       async adminCloseTask() {},
       async payInfo() { return store.get("wcia_demo_pay", null) || { fee_pct: 12, instant_fee: 1.99, payments_on: false }; },
+      // The Command Center shows only real records, so the offline demo has none to show.
+      async cc() { throw new ApiError("live_only", "The Command Center needs the live system (sign in on the real site)."); },
       async adminMoney() {
         const p = await this.payInfo(), db = load(), since = Date.now() - 30 * 864e5;
         const done = db.bookings.filter((b) => b.status === "completed" && Date.parse(b.completed_at) > since);
