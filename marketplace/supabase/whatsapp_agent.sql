@@ -45,7 +45,7 @@ declare
   s public.agent_settings; v_ids uuid[]; v_uid uuid; p public.profiles; w public.workers;
   v_role text := 'unknown'; v_ctx jsonb := '{}'; n_hour int; n_day int; n_all int;
   v_today date := (now() at time zone 'America/New_York')::date;
-  fmt constant text := 'Dy Mon DD, HH12:MI AM';
+  fmt constant text := 'Dy Mon DD, HH24:MI'; -- military (24-hour) time, same as the app
 begin
   if length(d) = 10 then d := '1' || d; end if;
   select * into s from public.agent_settings where id = 1;

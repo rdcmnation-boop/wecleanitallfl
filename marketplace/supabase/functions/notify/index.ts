@@ -13,6 +13,17 @@ const KEY = env("SUPABASE_SERVICE_ROLE_KEY");
 const sbHeaders = { apikey: KEY, Authorization: `Bearer ${KEY}`, "Content-Type": "application/json" };
 const APP = "https://www.wecleanitallfl.com/";
 
+// 24-hour (military) time, HH:mm, Miami time: same rule as the app (app/time.js). "lun, 16 de nov, 14:00".
+const pad2 = (n: number) => String(n).padStart(2, "0");
+const whenET = (iso: string) => {
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return "-";
+  const tz = "America/New_York";
+  const parts = new Intl.DateTimeFormat("en-US", { timeZone: tz, hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).formatToParts(d);
+  const get = (k: string) => Number((parts.find((x) => x.type === k) || { value: "0" }).value);
+  return d.toLocaleDateString("es-US", { timeZone: tz, weekday: "short", month: "short", day: "numeric" }) + ", " + pad2(get("hour") % 24) + ":" + pad2(get("minute"));
+};
+
 type Note = { id: number; user_id: string; channel: string; template: string; payload: Record<string, unknown> };
 
 const TEXT: Record<string, (p: Record<string, unknown>) => string> = {
@@ -49,7 +60,7 @@ async function sendWhatsAppMeta(phone: string, n: Note): Promise<string> {
   if (!token || !phoneId) return "skip:no_whatsapp_keys";
   const p = n.payload as Record<string, string>;
   const params: Record<string, string[]> = {
-    job_offer: [p.code, p.service, p.city || p.zip, p.scheduled_at ? new Date(p.scheduled_at).toLocaleString("es-US", { timeZone: "America/New_York" }) : "ASAP", p.budget ? `$${p.budget}` : "-"],
+    job_offer: [p.code, p.service, p.city || p.zip, p.scheduled_at ? whenET(p.scheduled_at) : "ASAP", p.budget ? `$${p.budget}` : "-"],
     booking_assigned: [p.code], job_assigned: [p.code],
   };
   const body = {

@@ -223,7 +223,7 @@ begin
     end loop;
   end if;
 
-  -- finance + orchestrator: one morning summary (8 AM Miami time).
+  -- finance + orchestrator: one morning summary (08:00 Miami time).
   if extract(hour from v_et) = 8 then
     if public.agent_is_live('finance') then
       perform public._agent_alert('finance', 'daily_revenue', 'revenue:' || v_day,

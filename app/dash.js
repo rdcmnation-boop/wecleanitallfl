@@ -141,7 +141,7 @@
 
     const firstName = (n) => { const p = String(n || "").trim().split(/\s+/); return p[0] ? p[0] + (p[1] ? " " + p[1][0] : "") : ""; };
     const money2 = (n) => "$" + Number(n || 0).toLocaleString(loc(), { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    const hhmm = (iso) => new Date(iso).toLocaleTimeString(loc(), { hour: "numeric", minute: "2-digit" });
+    const hhmm = (iso) => window.WCIA_TIME.hm(iso); // military (24-hour) time, HH:mm, from app/time.js
     function ago(iso) {
       const d = (Date.now() - Date.parse(iso)) / 1000;
       if (!isFinite(d) || d < 45) return t("just_now");

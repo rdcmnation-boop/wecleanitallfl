@@ -17,10 +17,11 @@
   const t = (k, v) => { let s = (I18N[lang] && I18N[lang][k]) || I18N.es[k] || k; if (v) Object.keys(v).forEach((x) => { s = s.split("{" + x + "}").join(v[x]); }); return s; };
   const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const money = (n) => n == null || n === "" ? "—" : "$" + Number(n).toLocaleString(lang === "es" ? "es-US" : "en-US", { maximumFractionDigits: 0 });
+  // Military (24-hour) time everywhere, HH:mm (00:00 to 23:59): every time on screen goes through app/time.js.
+  const TM = window.WCIA_TIME;
   const when = (iso) => {
     if (!iso) return t("asap");
-    const d = new Date(iso);
-    return d.toLocaleString(lang === "es" ? "es-US" : "en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+    return TM.dateTime(iso, lang === "es" ? "es-US" : "en-US");
   };
   const digits = (p) => String(p || "").replace(/\D/g, "");
   const intl = (p) => { const d = digits(p); return d.length === 10 ? "1" + d : d; };
@@ -340,7 +341,7 @@
   // Driver-style job timer: big elapsed time, pauses leave out the paused minutes. Ticks every second.
   const jobTimer = (b) => b.status === "in_progress" && b.started_at ? '<p class="job-timer' + (b.paused_at ? " paused" : "") + '" data-started="' + esc(b.started_at) + '" data-paused-seconds="' + Number(b.paused_seconds || 0) + '"' + (b.paused_at ? ' data-paused-at="' + esc(b.paused_at) + '"' : "") + ">" + icon("clock") + "<span>" + esc(t("timer_label")) + ' <b class="tval">--:--</b>' + (b.paused_at ? ' <small class="paused-tag">' + esc(t("timer_paused")) + "</small>" : "") + "</span></p>" : "";
   // Live local time and date (like a ride-app header), and the next booked visit. Clock ticks with the timers.
-  const clockText = () => new Date().toLocaleTimeString(lang === "en" ? "en-US" : "es-US", { hour: "numeric", minute: "2-digit", second: "2-digit" });
+  const clockText = () => TM.hms(new Date());
   const headerDate = () => new Date().toLocaleDateString(lang === "en" ? "en-US" : "es-US", { weekday: "short", month: "short", day: "numeric" });
   function dateStrip() {
     const now = new Date();
@@ -518,7 +519,7 @@
     const timeChips = SLOTS.map((s) => {
       const ok = !!curDay && slotOk(curDay, s);
       return '<label class="chip"><input type="radio" name="stime" value="' + s + '"' + (s === curTime ? " checked" : "") + (ok ? "" : " disabled") + "><span>" +
-        esc(new Date("2000-01-01T" + s).toLocaleTimeString(loc, { hour: "numeric", minute: "2-digit" })) + "</span></label>";
+        esc(TM.slot(s)) + "</span></label>"; // 24-hour slot label, HH:mm
     }).join("");
     return '<p class="label small">' + esc(t("pick_day")) + '</p><div class="chips">' + dayChips + "</div>" +
       '<p class="label small">' + esc(t("pick_time")) + '</p><div class="chips">' + timeChips + "</div>" +

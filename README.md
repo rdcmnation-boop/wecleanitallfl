@@ -13,4 +13,6 @@ Live at https://www.wecleanitallfl.com (wecleanitallfl.com forwards there). The 
 - `app/`: the marketplace app (customers, cleaners, owner) at /app/ — see `marketplace/README.md`
 - `marketplace/supabase/`: database schema, security tests and Phase 2 connectors
 
+Time rule (permanent): every time shown to people is 24-hour military time, HH:mm (00:00 to 23:59), never AM/PM. All screens format times through `app/time.js` (demo copy in `demo/app/time.js`); server messages use the same rule in Miami time. `node --test tests/` fails if any user-facing file formats a 12-hour clock.
+
 Contact: 954-320-9303 · wecleanitallfl@gmail.com · Instagram @wecleanitallfl
