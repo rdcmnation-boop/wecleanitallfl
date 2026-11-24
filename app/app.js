@@ -12,8 +12,8 @@
     get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : v; } catch (e) { return d; } },
     set(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* ignore */ } }
   };
-  let lang = store.get("wcia_lang", (navigator.language || "es").toLowerCase().startsWith("es") ? "es" : "en");
-  if (!I18N[lang]) lang = "es";
+  let lang = store.get("wcia_lang", "en"); // English by default; a visitor's saved Spanish choice is kept
+  if (!I18N[lang]) lang = "en";
   const t = (k, v) => { let s = (I18N[lang] && I18N[lang][k]) || I18N.es[k] || k; if (v) Object.keys(v).forEach((x) => { s = s.split("{" + x + "}").join(v[x]); }); return s; };
   const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const money = (n) => n == null || n === "" ? "—" : "$" + Number(n).toLocaleString(lang === "es" ? "es-US" : "en-US", { maximumFractionDigits: 0 });
@@ -147,7 +147,7 @@
     worker: [],
     admin: [["panel", "grid", "tab_panel"], ["bookings", "list", "tab_bookings"], ["workers", "users", "tab_workers"], ["system", "spark", "tab_more"]]
   };
-  const APP_VERSION = "2026.11.2j";
+  const APP_VERSION = "2026.11.2k";
   let DASH = null;
   const DD = () => DASH || (DASH = window.WCIA_DASH({ t, esc, icon, money, when, svcName, S, CFG, wa, tel, stars, empty, loading, jobTimer, statusBanner, reviewsPanel, role, brainCard, store, tile, lang: () => lang, version: APP_VERSION }));
   // Screens a role can open (tab bar + side menu + sub-screens), so a saved screen is restored after a reload.
